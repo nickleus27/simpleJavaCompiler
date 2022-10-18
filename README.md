@@ -7,6 +7,6 @@ This is a compiler for Apple Silicon arm64. The language specification for ```Si
 Starter code for this project can be found at https://www.cs.usfca.edu/~galles/compilerdesign/
 The main difference in this project from the book is that I have modified it to compile to arm64 architecture.
 
-To build: ```cd build && make```
+To build: ```cd src/build && make```
 
 ```Warning!!!: this repo is not complete and the build will not work under all conditions!```
