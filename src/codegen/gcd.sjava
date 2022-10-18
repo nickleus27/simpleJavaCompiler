@@ -1,0 +1,36 @@
+/**
+* File by David Galles and can be found at https://www.cs.usfca.edu/~galles/compilerdesign/
+*/
+
+int mod(int x, int y);
+int GCD(int x, int y);
+
+int main() {
+   int n1;
+   int n2;
+   int result;
+ 
+   n1 = readint();
+   n2 = readint();
+   result = GCD(n1,n2);
+   writelnint(result);
+}
+
+int mod(int x, int y) {
+   while (x >= y) 
+       x = x - y;
+   return x;
+}
+
+int GCD(int x, int y) {
+   int tmp;
+   if (x < y) {
+       tmp = x;
+       x = y;
+       y = tmp; 
+   }
+   if (y == 0)
+      return x;
+   else
+      return GCD(y, mod(x,y));
+}
