@@ -139,55 +139,41 @@ void nextElem(stack_env env, int index, stack element, int offset_8, int offset_
     switch(element->kind){
         case(A64_Var):
         {
-            //curr = element;
             env->vector[index] = env->vector[index]->u.var.rest;
             switch(*element->u.var.offset){
                 case(PTR):
                 {
-                    //pop element
-                    //stack_8 = element->u.var.rest = stack_8;
                     offset_8 += 8;
                     *element->u.var.offset =  offset_8; //updating integer pointer
                     env->vector[index] = element->u.var.rest;
                     nextElem(env, index, element->u.var.rest, offset_8, offset_4, offset_1);
                     offset_8-=8; //remove offset from as leaving the scope
-                    //delete element
                 }break;
                 case(INT):
                 {
-                    //pop element
                     offset_4 += 4;
                     *element->u.var.offset =  offset_4;
                     env->vector[index] = element->u.var.rest;
                     nextElem(env, index, element->u.var.rest, offset_8, offset_4, offset_1);
                     offset_4-=4;
-                    //delete element
                 }break;
                 case(BOOL):
                 {
-                    //pop element
                     offset_1 += 1;
                     *element->u.var.offset =  offset_1;
                     env->vector[index] = element->u.var.rest;
                     nextElem(env, index, element->u.var.rest, offset_8, offset_4, offset_1);
                     offset_1-=1;
-                    //delete element
                 }break;
             }
-            //free(curr);
             free(element);
         }break;
         case(A64_endScope):
         {
-            //pop element
-            //curr = element;
             stack next = env->vector[element->u.endScope.nextScope];
             env->vector[index] = env->vector[index]->u.endScope.rest;
             nextElem(env, element->u.endScope.nextScope, next, offset_8, offset_4, offset_1);
-            //nextElem(env, element->u.endScope.rest, offset_8, offset_4, offset_1);
             free(element);
-            //free(curr);
-            //delete element
         }break;
         default: break;
     }
@@ -197,22 +183,18 @@ void nextElem(stack_env env, int index, stack element, int offset_8, int offset_
 int generateStackMemory(stack_env env){
     /*calculate total memory to push on stack*/
     /*this needs to be 16 alignment */
-    /*this will be a combo of local vars, saved regs, and LR, FP, SP */
-    int savedReg =  3*8; //3*8 + 3*4 + 3*8; /* 3 64b reg, 3 32b reg, LR< FP, SP */
-    //int localBlockScope = env->block_totals->size_1 + env->block_totals->size_4 + env->block_totals->size_8;
+    /*this will be a combo of local vars, saved regs, and LR, FP, SP, AccSP32, AccSP64*/
+    int savedReg =  5*8; // 5 saved registers
     int localFunctionScope = env->mem_sizes->size_1 + env->mem_sizes->size_4 + env->mem_sizes->size_8;
-    int localMemTotal = savedReg + localFunctionScope;//+localBlockScope;
+    int localMemTotal = savedReg + localFunctionScope;
     int i = 0;
     while(localMemTotal%16){
         localMemTotal++;
         i++;
     }
-    int offset_8 = 0,//env->mem_sizes->size_8,// + env->block_totals->size_8, 
-        offset_4 = env->mem_sizes->size_8,//env->mem_sizes->size_4,// + env->block_totals->size_4, 
-        offset_1 = offset_4 + env->mem_sizes->size_4;// + env->block_totals->size_1;
-    //offset_8 += 8; //offset 8 from frame pointer
-    //offset_4 += offset_8;
-    //offset_1 += offset_4;
+    int offset_8 = 0,
+        offset_4 = env->mem_sizes->size_8,
+        offset_1 = offset_4 + env->mem_sizes->size_4;
 
     /*loop through each bucket and follow the chain until empty */
    for(int i = 0; i < env->size; i++){

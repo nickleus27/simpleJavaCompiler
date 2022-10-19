@@ -133,7 +133,7 @@ Register AccSP32(void) {
   if (R_accSP32 == NULL) {
     R_accSP32 = (Register) malloc(sizeof(*R_accSP32));
     R_accSP32 = (char *) malloc(sizeof(char)*4);
-    strcpy(R_accSP32,"x13");
+    strcpy(R_accSP32,"x23");
   }
   return R_accSP32;
 }
@@ -142,7 +142,7 @@ Register AccSP64(void) {
   if (R_accSP64 == NULL) {
     R_accSP64 = (Register) malloc(sizeof(*R_accSP64));
     R_accSP64 = (char *) malloc(sizeof(char)*4);
-    strcpy(R_accSP64,"x12");
+    strcpy(R_accSP64,"x22");
   }
   return R_accSP64;
 }

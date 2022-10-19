@@ -67,30 +67,41 @@ AATexpression OperatorExpression(AATexpression left, AATexpression right, AATope
 
 /*------------------> Statements <------------------*/
 AATstatement functionDefinition(AATstatement body, int framesize, Label start, Label end){
-  /* framesize * WORDSIZE + saved registers (LR, FP, SP) */
-  int localVarSize = framesize - 2*8; /* currently only saving LR, FP, and SP on stack*/
+  /* framesize * WORDSIZE + saved registers + (LR, FP, SP) */
+  /**
+   *  Need to make sure registers AccSP32() and AccSP64() are being save and restored properly
+   */
+  int localVarSize = framesize - 4*8; /* saving 5 registers so 5-1=4, SP starts om 0 offset*/
   return
   AATSequential(AATLabel(start),
     AATSequential(AATMove( AATRegister(SP()), AATOperator (AATRegister( SP() ) , _AATConstant( framesize ), AAT_MINUS ), REG),
-    AATSequential(AATMove( AATMemory( AATRegister( SP() ) ), AATOperator (AATRegister( SP() ) , _AATConstant( framesize ), AAT_PLUS ), REG),
-      AATSequential(AATMove( AATMemory( AATOperator(AATRegister( SP() ), _AATConstant( localVarSize ), AAT_PLUS ) ), AATRegister( FP() ), REG),
-      AATSequential(AATMove( AATRegister(FP()), AATOperator(AATRegister( SP() ), _AATConstant( localVarSize ), AAT_PLUS ), REG),
-        AATSequential(AATMove( AATMemory( AATOperator(AATRegister( FP() ), _AATConstant( REG ), AAT_PLUS ) ), AATRegister( ReturnAddr() ), REG),
-            /*###================> Need to save AccSP32 and AccSP64 here <=======###*/ 
-              AATSequential(body,
-                AATSequential(AATLabel(end),
-                  AATSequential(AATMove(AATRegister(ReturnAddr()), AATMemory( AATOperator(AATRegister(FP()), _AATConstant( REG ), AAT_PLUS)), REG),
-                    AATSequential(AATMove(AATRegister(FP()), AATMemory(AATRegister(FP())), REG),
-                      AATSequential(AATMove(AATRegister(SP()), AATMemory( AATRegister(SP())), REG), AATReturn()))
+      AATSequential(AATMove( AATMemory( AATRegister( SP() ) ), AATOperator (AATRegister( SP() ) , _AATConstant( framesize ), AAT_PLUS ), REG),
+        AATSequential(AATMove( AATMemory( AATOperator(AATRegister( SP() ), _AATConstant( localVarSize ), AAT_PLUS ) ), AATRegister( FP() ), REG),
+          AATSequential(AATMove( AATRegister(FP()), AATOperator(AATRegister( SP() ), _AATConstant( localVarSize ), AAT_PLUS ), REG),
+            AATSequential(AATMove( AATMemory( AATOperator(AATRegister( FP() ), _AATConstant( REG ), AAT_PLUS ) ), AATRegister( ReturnAddr() ), REG),
+              AATSequential(AATMove( AATMemory( AATOperator(AATRegister( FP() ), _AATConstant( 2* REG ), AAT_PLUS ) ), AATRegister( AccSP32() ), REG),
+                AATSequential(AATMove( AATMemory( AATOperator(AATRegister( FP() ), _AATConstant( 3* REG ), AAT_PLUS ) ), AATRegister( AccSP64() ), REG),
+                  AATSequential(body,
+                    AATSequential(AATLabel(end),
+                      AATSequential(AATMove(AATRegister(AccSP64()), AATMemory( AATOperator(AATRegister(FP()), _AATConstant( 3* REG ), AAT_PLUS)), REG),
+                        AATSequential(AATMove(AATRegister(AccSP32()), AATMemory( AATOperator(AATRegister(FP()), _AATConstant( 2* REG ), AAT_PLUS)), REG),
+                          AATSequential(AATMove(AATRegister(ReturnAddr()), AATMemory( AATOperator(AATRegister(FP()), _AATConstant( REG ), AAT_PLUS)), REG),
+                            AATSequential(AATMove(AATRegister(FP()), AATMemory(AATRegister(FP())), REG),
+                              AATSequential(AATMove(AATRegister(SP()), AATMemory( AATRegister(SP())), REG), AATReturn())
+                            )
+                          )
+                        )    
+                      )
                     )
-                  )    
+                  )
                 )
               )
             )
           )
         )
       )
-    );
+    )
+  );
 }
 
 AATstatement ReturnStatement(AATexpression value, Label functionend){

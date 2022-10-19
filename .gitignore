@@ -3,3 +3,8 @@
 **/*.s
 build/sjc
 **/.DS_Store
+src/build/lex.yy.h
+src/build/lex.yy.c
+src/build/parser.h
+src/build/parser.c
+src/build/sjc
