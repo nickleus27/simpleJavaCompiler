@@ -22,6 +22,7 @@ struct type_ {
 };
 
 struct typeList_ {
+  int* offset;
   type first;
   typeList rest;
 };
@@ -31,6 +32,6 @@ type BooleanType();
 type VoidType();
 type ClassType(environment instancevars);
 type ArrayType(type basetype);
-typeList TypeList(type first, typeList rest);
+typeList TypeList(type first, typeList rest, int offset);
 
 

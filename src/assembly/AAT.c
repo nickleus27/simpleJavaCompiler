@@ -148,6 +148,7 @@ AATexpression AATFunctionCall(Label jump, AATexpressionList actuals) {
 AATexpression _AATConstant(int constant){
   AATexpression retval = (AATexpression) malloc(sizeof(struct AATexpression_));
   retval->kind = AAT_CONSTANT;
+  /*TODO: need to free this memory*/
   retval->u.constant = (int*)malloc(sizeof(int));
   *retval->u.constant = constant;
   return retval;

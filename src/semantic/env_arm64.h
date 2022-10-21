@@ -16,7 +16,7 @@
 typedef struct stack_ *stack;
 typedef struct stack_env_ *stack_env;
 
-stack_env new_stack_env(int init_size );
+stack_env new_stack_env(int init_size, bool functionStack );
 void enter_arm64( stack_env env, int index, int* data );
 void free_arm64_env(stack_env env);
 //int stack_env_size(stack_env env);
@@ -25,5 +25,7 @@ void stack_env_clear(stack_env env, int size);
 void addMemSizes(stack_env env, env_sizes mem);//, env_sizes block);
 void arm64endScope(stack_env env, int scope);
 int generateStackMemory(stack_env env);
+int pushArgsOnStack(stack_env env, env_sizes mem_sizes);
+void generateArgStackMemory(stack_env env, int totalArgSize);
 
 #endif /* int_vector_h */

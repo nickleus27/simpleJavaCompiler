@@ -229,7 +229,6 @@ void generateOpExp32(AATexpression tree){
   }
 }
 
-
 void generateStatement(AATstatement tree) {
   switch (tree->kind) {
     case AAT_MOVE:
@@ -242,7 +241,7 @@ void generateStatement(AATstatement tree) {
 
         break;
     case AAT_PROCEDURECALL:
-
+      /*pop values of stack*/
         break;
     case AAT_SEQ:
       generateStatement(tree->u.sequential.left);

@@ -46,20 +46,30 @@ AATexpression ArrayVariable(AATexpression base, AATexpression index, int element
 /* remember to add offset to envEntry every time a variable is entered into environment */
 /* cmd+f : "VarEntry" and add variable offsets. */
 AATexpression BaseVariable(int* offset){
-  return AATMemory( AATOperator(AATRegister( FP() ),AATConstant( offset ), AAT_MINUS ) );
+  return AATMemory( AATOperator(AATRegister( FP() ),AATConstant( offset ), AAT_PLUS ) );
 }
 
 AATexpression ConstantExpression(int value){
+  /*
   int* val = (int*)malloc(sizeof(int));
   *val = value;
   return AATConstant(val);
+  */
+ return _AATConstant(value);
 }
 
 /*needs work. need to push args on stack */
-AATexpression CallExpression(AATexpressionList actuals, Label name){
+AATexpression CallExpression(AATexpressionList actuals, Label name /*, int ArgSize*/){
+  /* need to move SP() down first before function call*/
+  /* AATSequential to move down SP(), and attach AATFunctionCall at the end*/
   return AATFunctionCall( name, actuals);
 }
-/*Need to do CallStatement() */
+
+AATstatement CallStatement(AATexpressionList actuals, Label name/*, int ArgSize*/){
+  /* need to move SP() down first before function call*/
+  /* AATSequential to move down SP(), and attach AATProcedureCall at the end*/
+  return AATProcedureCall( name, actuals);
+}
 
 AATexpression OperatorExpression(AATexpression left, AATexpression right, AAToperator operator){
   return AATOperator(left, right,  operator);

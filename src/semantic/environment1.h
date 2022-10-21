@@ -33,17 +33,10 @@ envEntry find(environment env, char *key);
 
 int envSize(environment env);
 
-/* functions to keep track of total size needed for a stack frame include block statements */
-/*
-void resetStackFrameSize(void);
-void addBlockScopeSize(int size);
-int getStackFrameSize(void);
-*/
-
 int getScope(environment env);
 env_sizes getMemTotals();
 /* call this after function analysis ends */
 void resetMemTotals();
-//env_sizes getBlockTotals();
+env_sizes getEnvMemTotals(environment env);
 
 #endif

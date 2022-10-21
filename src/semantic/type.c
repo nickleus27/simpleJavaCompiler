@@ -57,9 +57,11 @@ type ArrayType(type basetype) {
   return retval;
 }
   
-typeList TypeList(type first, typeList rest) {
+typeList TypeList(type first, typeList rest, int offset) {
   typeList retval = (typeList) malloc(sizeof(struct typeList_));
+  retval->offset = (int*) malloc(sizeof(int));
   retval->first = first;
   retval->rest = rest;
+  *retval->offset = offset;
   return retval;
 }

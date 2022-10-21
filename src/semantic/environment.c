@@ -44,7 +44,6 @@ char *Marker();
 /* Static variables */
 
 char *stackmarker = NULL;
-//env_sizes blockTotals = NULL;
 env_sizes memTotals = NULL;
 
 /* Function Definitions */
@@ -80,44 +79,7 @@ void enter(environment env, char * key, envEntry entry) {
         break;
       }
     }break;
-    case Function_Entry:
-    {
-      switch(entry->u.varEntry.typ->size_type){
-        case PTR:
-        {
-          (env->sizes.size_8)+=entry->u.varEntry.typ->size_type;
-        }break;
-        case INT:
-        {
-          (env->sizes.size_4)+=entry->u.varEntry.typ->size_type;
-        }break;
-        case BOOL:
-        {
-          (env->sizes.size_1)+=entry->u.varEntry.typ->size_type;
-        }break;
-        default:
-        break;
-      }
-    }break;
-    case Type_Entry:
-    {
-      switch(entry->u.varEntry.typ->size_type){
-        case PTR:
-        {
-          (env->sizes.size_8)+=entry->u.varEntry.typ->size_type;
-        }break;
-        case INT:
-        {
-          (env->sizes.size_4)+=entry->u.varEntry.typ->size_type;
-        }break;
-        case BOOL:
-        {
-          (env->sizes.size_1)+=entry->u.varEntry.typ->size_type;
-        }break;
-        default:
-        break;
-      }
-    }break;
+    default: break;
   }
   H_insert(env->table,key,(void *) entry);
   env->stack = StackElem(key,env->stack); 
@@ -131,16 +93,7 @@ void beginScope(environment env) {
   env->stack = StackElem(Marker(),env->stack);
   env->scope++;
 }
-/*
-void updateBlockTotals(environment env){
-  if (env->sizes.size_8 > blockTotals->size_8 )
-    blockTotals->size_8 = env->sizes.size_8;
-  if (env->sizes.size_4 > blockTotals->size_4)
-     blockTotals->size_4 = env->sizes.size_4;
-  if (env->sizes.size_1 > blockTotals->size_1)
-     blockTotals->size_1 = env->sizes.size_1;
-}
-*/
+
 void updateMemTotals(environment env){
   if (env->sizes.size_8 > memTotals->size_8 )
     memTotals->size_8 = env->sizes.size_8;
@@ -149,11 +102,9 @@ void updateMemTotals(environment env){
   if (env->sizes.size_1 > memTotals->size_1)
      memTotals->size_1 = env->sizes.size_1;
 }
+
 int endScope(environment env) {
-  //if(env->scope)
-    //updateBlockTotals(env);
-  //else
-    updateMemTotals(env);
+  updateMemTotals(env);
   stackElem temp;
   while(env->stack && (env->stack->key != Marker())) {
     envEntry var = find(env, env->stack->key);
@@ -177,44 +128,7 @@ int endScope(environment env) {
           break;
         }
       }break;
-      case Function_Entry:
-      {
-        switch(var->u.varEntry.typ->size_type){
-          case PTR:
-          {
-            (env->sizes.size_8) -= var->u.varEntry.typ->size_type;
-          }break;
-          case INT:
-          {
-            (env->sizes.size_4) -= var->u.varEntry.typ->size_type;
-          }break;
-          case BOOL:
-          {
-            (env->sizes.size_1) -= var->u.varEntry.typ->size_type;
-          }break;
-          default:
-          break;
-        }
-      }break;
-      case Type_Entry:
-      {
-        switch(var->u.varEntry.typ->size_type){
-          case PTR:
-          {
-            (env->sizes.size_8) -= var->u.varEntry.typ->size_type;
-          }break;
-          case INT:
-          {
-            (env->sizes.size_4) -= var->u.varEntry.typ->size_type;
-          }break;
-          case BOOL:
-          {
-            (env->sizes.size_1) -= var->u.varEntry.typ->size_type;
-          }break;
-          default:
-          break;
-        }
-      }break;
+      default: break;
     }
     H_delete(env->table,env->stack->key);
     temp = env->stack;
@@ -238,23 +152,17 @@ void AddBuiltinTypes(environment env) {
 
 void AddBuiltinFunctions(environment env) {
   typeList formals = NULL;
-  enter(env, "Read", FunctionEntry(IntegerType(),NULL,"Read","Readend"));
+  //enter(env, "Read", FunctionEntry(IntegerType(),NULL,"Read","Readend"));
   enter(env, "Println", FunctionEntry(VoidType(),NULL,"Println","Printlnend"));
-  enter(env, "Print", FunctionEntry(VoidType(), TypeList(IntegerType(), NULL),
-				    "Print","Printend"));
+  //enter(env, "Print", FunctionEntry(VoidType(), TypeList(IntegerType(), NULL),
+	//			    "Print","Printend"));
 }
 
 void initMemTrackers(){
-  /*
-  blockTotals = (env_sizes)malloc(sizeof(struct env_sizes_));
-  blockTotals->size_1=0;
-  blockTotals->size_4=0;
-  blockTotals->size_8=0;
-  */
   memTotals = (env_sizes)malloc(sizeof(struct env_sizes_));
   memTotals->size_1=0;
+  memTotals->size_4=0;
   memTotals->size_8=0;
-  memTotals->size_1=0;
 }
 
 environment Environment() {
@@ -262,13 +170,14 @@ environment Environment() {
   retval->table = H_HashTable(HASHTABLESIZE);
   retval->sizes.size_8 = retval->sizes.size_4 = retval->sizes.size_1 = 0;
   retval->stack = NULL;
-  retval->scope = -1;
+  retval->scope = 0;
   return retval;
 }
 
 
 envEntry VarEntry(type typ, int offset) {
   envEntry retval = (envEntry) malloc(sizeof(struct envEntry_));
+  /*TODO: MEMORY needs to be FREED*/
   retval->u.varEntry.offset  = (int*)malloc(sizeof(int));
   retval->kind = Var_Entry;
   retval->u.varEntry.typ = typ;
@@ -286,6 +195,9 @@ envEntry FunctionEntry(type returntyp, typeList formals, Label startLabel, Label
   return retval;
 }
 
+void setArgMemSize(envEntry functionEntry, int size){
+  functionEntry->u.functionEntry.argMemSize = size;
+}
 
 envEntry TypeEntry(type typ) {
   envEntry retval = (envEntry) malloc(sizeof(struct envEntry_));
@@ -301,27 +213,20 @@ stackElem StackElem(char *key, stackElem next) {
   return retval;
 }
 
-/*
-env_sizes getBlockTotals(){
-  env_sizes retval = (env_sizes)malloc(sizeof(struct env_sizes_));
-  retval->size_1 = blockTotals->size_1;
-  retval->size_4 = blockTotals->size_4;
-  retval->size_8 = blockTotals->size_8;
-  blockTotals->size_1 =0;
-  blockTotals->size_4 =0;
-  blockTotals->size_8 =0;
-  return retval;
-}
-*/
 
 env_sizes getMemTotals(){
   env_sizes retval = (env_sizes)malloc(sizeof(struct env_sizes_));
   retval->size_1 = memTotals->size_1;
   retval->size_4 = memTotals->size_4;
   retval->size_8 = memTotals->size_8;
-  //memTotals->size_1 =0;
-  //memTotals->size_4 =0;
-  //memTotals->size_8 =0;
+  return retval;
+}
+
+env_sizes getEnvMemTotals(environment env){
+  env_sizes retval = (env_sizes)malloc(sizeof(struct env_sizes_));
+  retval->size_1 = env->sizes.size_1;
+  retval->size_4 = env->sizes.size_4;
+  retval->size_8 = env->sizes.size_8;
   return retval;
 }
 

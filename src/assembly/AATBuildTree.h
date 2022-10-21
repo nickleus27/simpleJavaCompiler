@@ -35,4 +35,4 @@ AATexpression ConstantExpression(int value);
 AATexpression OperatorExpression(AATexpression left, AATexpression right, AAToperator operator);
 AATexpression CallExpression(AATexpressionList actuals, Label name);
 
-AATexpressionList ActualList(AATexpression first, AATexpression rest);
+AATexpressionList ActualList(AATexpression first, AATexpressionList rest);

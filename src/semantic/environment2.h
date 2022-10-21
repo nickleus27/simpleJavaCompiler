@@ -9,6 +9,7 @@
 envEntry VarEntry(type typ, int offset);
 envEntry FunctionEntry(type returntyp, typeList formals, Label startLabel, Label endLabel);
 envEntry TypeEntry(type typ);
+void setArgMemSize(envEntry functionEntry, int size);
 
 
 struct envEntry_ {
@@ -20,6 +21,7 @@ struct envEntry_ {
       int* offset; /* TODO: need to make this int * for adjusting offset form ARM64 */
     } varEntry;
     struct {
+      int argMemSize;
       type returntyp;
       typeList formals;
       Label startLabel;

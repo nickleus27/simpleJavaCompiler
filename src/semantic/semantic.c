@@ -44,6 +44,7 @@ int forStmFlag = END_BLOCK_SCOPE;
 int blockScopeFlag = END_BLOCK_SCOPE;
 envEntry GLOBfunctPtr = NULL;
 stack_env functionStack = NULL;
+stack_env argStack = NULL;
 
 /* does ExpressionRec need to return a pointer??? */
 expressionRec ExpressionRec(type typ, AATexpression tree);
@@ -92,7 +93,8 @@ AATstatement analyzeProgram(ASTprogram program) {
   AddBuiltinTypes(typeEnv);
   AddBuiltinFunctions(functionEnv);
   initMemTrackers();
-  functionStack = new_stack_env(8);
+  functionStack = new_stack_env(8, true);
+  argStack = new_stack_env(1, false);//only need 1 scope
 
   /* analyze classes */
   visitClassList(typeEnv, functionEnv, varEnv, program->classes);
@@ -232,7 +234,8 @@ envEntry analyzeFormal(environment typeEnv, environment functionEnv, environment
 }
 
 /* compares function def to prototype formal typeList. */
-/* Adds function def formals to varEnv */
+/* Adds function def formals to varEnv + env_arm64 for offset calculations */
+/* Adds function protoType formals to arm64 envs for memory offset calculations*/
 void visitFormals(environment typeEnv, environment varEnv, typeList protoList, ASTfunctionDec function, ASTformalList formals){
   if (!formals && protoList || formals && !protoList){
     Error(function->line, " function formals differ from function prototype");
@@ -256,6 +259,12 @@ void visitFormals(environment typeEnv, environment varEnv, typeList protoList, A
         formType = enterArrayTypesFormal(typeEnv, formType, formals->first);
       }/* enter variable here */
       enter( varEnv, formals->first->name, VarEntry( formType->u.typeEntry.typ, formType->u.typeEntry.typ->size_type ) );
+      envEntry formalArg = find(varEnv, formals->first->name);/*arg for function variable and offset from fp*/
+      /*  first adding pointer to function formal to env_arm64 for offset from SP when pushing args on stack from
+      **  a function call...when a caller calls the funtion.
+      **  need to enter pointer to variable from varEnv to env_arm4 which will be offset from FP in function*/
+      enter_arm64(argStack, 0/*args should always be scope=0*/, protoList->offset);
+      enter_arm64(functionStack, formalArg->u.varEntry.scope/*args should always be scope=0*/, formalArg->u.varEntry.offset);
     }
     if(formType && protoList){
       if ( formType->u.typeEntry.typ != protoList->first)
@@ -273,12 +282,12 @@ typeList analyzeFormalList(environment typeEnv, environment functionEnv, environ
   if(!formals) return NULL;
   typeList head = analyzeFormalList(typeEnv, functionEnv, varEnv, formals->rest);
   envEntry formType = analyzeFormal( typeEnv, functionEnv, varEnv, formals->first);
-  return TypeList(formType->u.typeEntry.typ, head);
+  return TypeList(formType->u.typeEntry.typ, head, formType->u.typeEntry.typ->size_type);
 }
 
 /* Need to check for return statement !!! */
 AATstatement analyzeFunction(environment typeEnv, environment functionEnv, environment varEnv, ASTfunctionDec function){
-
+  int totalArgSize;
   switch(function->kind){
     case Prototype:
     {
@@ -304,9 +313,16 @@ AATstatement analyzeFunction(environment typeEnv, environment functionEnv, envir
         funType = find(functionEnv, function->u.prototype.name );
       }
       typeList formalList = funType->u.functionEntry.formals;
-
-      beginScope(varEnv);
       visitFormals( typeEnv, varEnv, formalList, function, function->u.functionDef.formals );
+      /* arrange offsets for pushing functions args on stack (offset from SP after moving it down size of args)*/
+      totalArgSize = pushArgsOnStack(argStack, getEnvMemTotals(varEnv));
+      setArgMemSize(funType, totalArgSize);
+      /* arrange offsets for access to argument variables from function (offset from FP)*/
+      addMemSizes(functionStack, getEnvMemTotals(varEnv));
+      generateArgStackMemory(functionStack, totalArgSize);
+      /* reset mem totals for local vars*/
+      //resetMemTotals();
+      beginScope(varEnv);
       RETURN_FLAG = NO_RETURN_TYPE;
       GLOBfunctPtr = NULL;
       GLOBfunctPtr = find(functionEnv, function->u.functionDef.name);
@@ -318,7 +334,7 @@ AATstatement analyzeFunction(environment typeEnv, environment functionEnv, envir
       //offset = 0;
       arm64endScope( functionStack , endScope(varEnv));
       addMemSizes(functionStack, getMemTotals());
-      endScope(varEnv);
+      //endScope(varEnv); //does this need to called again? it is a called above fore arm64endScope argument
       resetMemTotals();//need to call this at the end of analyzing stack memory
       AATseqStmCleanUp( stmPtr );
       return functionDefinition(AATpop(), generateStackMemory(functionStack), GLOBfunctPtr->u.functionEntry.startLabel, GLOBfunctPtr->u.functionEntry.endLabel);
@@ -463,10 +479,10 @@ AATstatement analyzeStatement(environment typeEnv, environment functionEnv, envi
           }
           return AssignmentStatement( BaseVariable(LHS->u.varEntry.offset), RHS.tree, LHS->u.varEntry.typ->size_type );
         }
-        return AssignmentStatement(BaseVariable(LHS->u.varEntry.offset), EmptyStatement(), LHS->u.varEntry.typ->size_type );
+        return AssignmentStatement(BaseVariable(LHS->u.varEntry.offset), ConstantExpression(0), LHS->u.varEntry.typ->size_type );
       }else{
         Error(statement->line," %s type not defined", statement->u.varDecStm.type);
-        return AssignmentStatement(EmptyStatement(), EmptyStatement(), 0);
+        return AssignmentStatement(ConstantExpression(0), ConstantExpression(0), 0);
       }
     }
     break;
@@ -593,7 +609,7 @@ expressionRec analyzeNewArray(environment typeEnv, environment functionEnv, envi
   expType = find(typeEnv, key);
   if( !expType ) return ExpressionRec(NULL, ConstantExpression(0));
   return ExpressionRec(expType->u.typeEntry.typ, Allocate(OperatorExpression(
-    exp->u.newArrayExp.size, ConstantExpression(expType->u.typeEntry.typ->u.array->size_type), AAT_MULTIPLY)));
+    expRec.tree, ConstantExpression(expType->u.typeEntry.typ->u.array->size_type), AAT_MULTIPLY)));
 }
 
 expressionRec analyzeExpression(environment typeEnv, environment functionEnv, environment varEnv, ASTexpression exp) {
