@@ -8,5 +8,10 @@ Starter code for this project can be found at https://www.cs.usfca.edu/~galles/c
 The main difference in this project from the book is that I have modified it to compile to arm64 architecture.
 
 To build: ```cd src/build && make```
+To build debug: ```cd src/build && make debug```
 
-```Warning!!!: this repo is not complete and the build will not work under all conditions!```
+```Warning!!!: this repo is not complete!!!```
+
+Next Steps:
+1. Print integer function
+2. Free memory from the AST in semantic.c in post order
