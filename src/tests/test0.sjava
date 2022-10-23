@@ -1,5 +1,9 @@
 void main()
 { int x = 5000; }
-void foo(int a){
-    a=5;
+
+void foobar(int a){
+    int b = a+b;
+}
+void foo(){
+    foobar(5);
 }

@@ -364,15 +364,15 @@ AATexpressionList _analyzeCallExp(environment typeEnv, environment functionEnv, 
     expRec = analyzeExpression(typeEnv, functionEnv, varEnv, expList->first);
     if (  expRec.typ != formalList->first)
       Error( exp->line, " %s expression does not match function definition", exp->u.callExp.name);
-      return ActualList(ConstantExpression(0), actuals);
+      return ActualList(ConstantExpression(0), actuals, formalList->first->size_type, *formalList->offset);
   }else if ( !expList && formalList){
     Error( exp->line, " formals do not match function prototype" );
-    return ActualList(ConstantExpression(0), actuals);
+    return ActualList(ConstantExpression(0), actuals, formalList->first->size_type, *formalList->offset);
   }else if ( expList && !formalList){
     Error( exp->line, " formals do not match function prototype" );
-    return ActualList(ConstantExpression(0), actuals);
+    return ActualList(ConstantExpression(0), actuals, 0, 0);
   }
-  return ActualList(expRec.tree, actuals);
+  return ActualList(expRec.tree, actuals, formalList->first->size_type, *formalList->offset);
 }
 
 /* todo: consider switching this function from recursive to iterative like analyzeCallStm */
@@ -394,19 +394,29 @@ expressionRec analyzeCallExp(environment typeEnv, environment functionEnv, envir
   return ExpressionRec( function->u.functionEntry.returntyp, CallExpression(actuals , function->u.functionEntry.startLabel));
 }
 
-void analyzeCallStm(environment typeEnv, environment functionEnv, environment varEnv, ASTstatement statement){
+AATexpressionList analyzeCallStm(environment typeEnv, environment functionEnv, environment varEnv, ASTstatement statement){
   typeList formalList;
   ASTexpressionList actualList;
+  AATexpressionList first = NULL, current = NULL;
+  expressionRec exp;
+  bool noArgs = true;
   envEntry function = find( functionEnv, statement->u.callStm.name);
   if(!function){
     Error(statement->line," %s function not defined", statement->u.callStm.name);
-    return;
+    return NULL;
   }
   formalList = function->u.functionEntry.formals;
   actualList = statement->u.callStm.actuals;
   while( formalList && actualList ){
-
-    if (formalList->first != analyzeExpression(typeEnv, functionEnv, varEnv, actualList->first).typ){
+    exp =  analyzeExpression(typeEnv, functionEnv, varEnv, actualList->first);
+    if (formalList->first != exp.typ){
+      if( noArgs ){
+        noArgs = false;
+        first = current = ActualList(exp.tree, NULL, formalList->first->size_type, *formalList->offset);
+      }else{
+        current->rest = ActualList(exp.tree, NULL, formalList->first->size_type, *formalList->offset);
+        current = current->rest;
+      }
       switch (formalList->first->kind){
         case integer_type:
           Error(actualList->line, " Acutal type does not match formal int type");
@@ -425,12 +435,21 @@ void analyzeCallStm(environment typeEnv, environment functionEnv, environment va
         default:
           Error(actualList->line, " Bad statement");
       }
+    }else{
+      if( noArgs ){
+        noArgs = false;
+        first = current = ActualList(exp.tree, NULL, formalList->first->size_type, *formalList->offset);
+      }else{
+        current->rest = ActualList(exp.tree, NULL, formalList->first->size_type, *formalList->offset);
+        current = current->rest;
+      }
     }
     formalList = formalList->rest;
     actualList = actualList->rest;
   }
   if( formalList != NULL || actualList != NULL)
     Error(statement->line, " Number of actuals differs from formals");
+  return first;
 }
 
 AATstatement analyzeStatement(environment typeEnv, environment functionEnv, environment varEnv, ASTstatement statement) {
@@ -515,7 +534,13 @@ AATstatement analyzeStatement(environment typeEnv, environment functionEnv, envi
     break;
   case CallStm:
     {
-     //return analyzeCallStm(typeEnv, functionEnv, varEnv, statement);
+      envEntry function = find(functionEnv, statement->u.callStm.name);
+      if ( function )
+        return CallStatement( analyzeCallStm(typeEnv, functionEnv, varEnv, statement),
+          function->u.functionEntry.startLabel, function->u.functionEntry.argMemSize);
+      else
+        Error(statement->line, " Cannot find function %s", statement->u.callStm.name);
+        return EmptyStatement();
     }
     break;
   case ForStm:

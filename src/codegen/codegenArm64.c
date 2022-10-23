@@ -15,6 +15,7 @@
 #include "MachineDependent.h"
 #include "../assembly/AAT.h"
 
+
 #define WORD 8
 #define HALFWORD 4
 
@@ -228,7 +229,26 @@ void generateOpExp32(AATexpression tree){
     break;
   }
 }
-
+void addActualsToStack(AATexpressionList actual){
+  if (!actual)
+    return;
+  addActualsToStack(actual->rest);
+  switch(actual->size_type){
+    case(WORD):
+    {
+      generateExpression64(actual->first);
+      emit("ldr %s, [%s, #8]!", Acc32(), AccSP32());
+      emit("str %s, [%s, #%d]", Acc32(), SP(), actual->offset);
+    }break;
+    case(HALFWORD):
+    {
+      generateExpression64(actual->first);
+      emit("ldr %s, [%s, #8]!", Acc64(), AccSP64());
+      emit("str %s, [%s, #%d]", Acc64(), SP(), actual->offset);
+    }break;
+    default: printf("Bad expression size type");
+  }
+}
 void generateStatement(AATstatement tree) {
   switch (tree->kind) {
     case AAT_MOVE:
@@ -241,7 +261,18 @@ void generateStatement(AATstatement tree) {
 
         break;
     case AAT_PROCEDURECALL:
-      /*pop values of stack*/
+      /**
+       * @brief TODO: adjust stack pointer for argMemSize
+       * walk actual/formal list and add to stack according to offsets
+       * bl startLabel
+       * move sp back up the size of argMemSize
+       */
+
+      emit("mov %s, %s", Acc64(), SP());
+      emit("str %s, [%s, #-%d]!", Acc64(), SP(), tree->u.procedureCall.argMemSize);
+      addActualsToStack(tree->u.procedureCall.actuals);
+      emit("bl %s", tree->u.procedureCall.jump);
+      emit("sub %s, %s, #%d", SP(), SP(), tree->u.procedureCall.argMemSize);
         break;
     case AAT_SEQ:
       generateStatement(tree->u.sequential.left);
@@ -339,6 +370,10 @@ void emitSetupCode(void) {
     emit("mov X0, #0");
     emit("mov X16, #1");
     emit("svc #0x80");
+    /**
+     * @brief TODO: make print(d) function on startup
+     * 
+     */
 /*
   emit(".globl main");
   emit("main:");

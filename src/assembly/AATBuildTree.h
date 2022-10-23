@@ -10,6 +10,7 @@ typedef struct AATexpression_ *AATexpression;
 typedef struct AATstatement_ *AATstatement;
 typedef struct AATexpressionList_ *AATexpressionList;
 typedef char *Label;
+
 /*
 typedef enum {AAT_PLUS, AAT_MINUS, AAT_MULTIPLY, AAT_DIVIDE, AAT_LT,
 	      AAT_GT, AAT_LEQ, AAT_GEQ, AAT_EQ, AAT_NEQ, AAT_AND, AAT_OR,
@@ -22,7 +23,7 @@ AATstatement WhileStatement(AATexpression test, AATstatement whilebody);
 AATstatement DoWhileStatement(AATexpression test, AATstatement dowhilebody);
 AATstatement ForStatement(AATstatement init, AATexpression test, AATstatement increment, AATstatement body);
 AATstatement EmptyStatement(void);
-AATstatement CallStatement(AATexpressionList actuals, Label name);
+AATstatement CallStatement(AATexpressionList actuals, Label name, int argMemSize);
 AATstatement AssignmentStatement(AATexpression lhs, AATexpression rhs, int size);
 AATstatement SequentialStatement(AATstatement first, AATstatement second);
 AATstatement ReturnStatement(AATexpression value, Label functionend);
@@ -35,4 +36,4 @@ AATexpression ConstantExpression(int value);
 AATexpression OperatorExpression(AATexpression left, AATexpression right, AAToperator operator);
 AATexpression CallExpression(AATexpressionList actuals, Label name);
 
-AATexpressionList ActualList(AATexpression first, AATexpressionList rest);
+AATexpressionList ActualList(AATexpression first, AATexpressionList rest, int size_type, int offset);

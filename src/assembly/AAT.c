@@ -55,10 +55,12 @@ void AATseqStmCleanUp(AATstatement seqEnd){
   and change AATprint and AATtraversals to check for NULL */
 }
 
-AATexpressionList AATExpressionList(AATexpression first, AATexpressionList rest) {
+AATexpressionList AATExpressionList(AATexpression first, AATexpressionList rest, int size_type, int offset) {
   AATexpressionList retval = (AATexpressionList) malloc(sizeof(struct AATexpressionList_));
   retval->first = first;
   retval->rest = rest;
+  retval->size_type = size_type;
+  retval->offset = offset;
   return retval;
 }
 
@@ -92,11 +94,12 @@ AATstatement AATConditionalJump(AATexpression test,Label jump) {
   return retval;
 }
 
-AATstatement AATProcedureCall(Label jump, AATexpressionList actuals) {
+AATstatement AATProcedureCall(Label jump, AATexpressionList actuals, int argMemSize) {
   AATstatement retval = (AATstatement) malloc(sizeof(struct AATstatement_));
   retval->kind = AAT_PROCEDURECALL;
   retval->u.procedureCall.jump = jump;
   retval->u.procedureCall.actuals = actuals;
+  retval->u.procedureCall.argMemSize = argMemSize;
   return retval;
 }
 AATstatement AATSequential(AATstatement left, AATstatement right) {

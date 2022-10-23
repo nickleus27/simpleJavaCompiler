@@ -22,6 +22,8 @@ typedef enum {AAT_PLUS, AAT_MINUS, AAT_MULTIPLY, AAT_DIVIDE, AAT_LT,
 struct AATexpressionList_ {
   AATexpression first;
   AATexpressionList rest;
+  int size_type;
+  int offset;
 };
 
 struct AATstatement_ {
@@ -40,6 +42,7 @@ struct AATstatement_ {
     struct {
       Label jump;
       AATexpressionList actuals;
+      int argMemSize;
     } procedureCall;
     struct {
       AATstatement left;
@@ -67,12 +70,12 @@ struct AATexpression_ {
   } u;
 };
 
-AATexpressionList AATExpressionList(AATexpression first, AATexpressionList rest);
+AATexpressionList AATExpressionList(AATexpression first, AATexpressionList rest, int size_type, int offset);
 AATstatement AATMove(AATexpression lhs, AATexpression rhs, int size);
 AATstatement AATLabel(Label);
 AATstatement AATJump(Label jump);
 AATstatement AATConditionalJump(AATexpression test,Label jump);
-AATstatement AATProcedureCall(Label jump, AATexpressionList actuals);
+AATstatement AATProcedureCall(Label jump, AATexpressionList actuals, int argMemSize);
 AATstatement AATSequential(AATstatement left, AATstatement right);
 AATstatement AATEmpty(void);
 AATstatement AATReturn(void);

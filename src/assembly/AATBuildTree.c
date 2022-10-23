@@ -16,7 +16,7 @@
 
 /*------------------> Expressions <------------------*/
 AATexpression Allocate(AATexpression size) {
-  AATexpressionList actuals = AATExpressionList(size, NULL);
+  AATexpressionList actuals = AATExpressionList(size, NULL, 0, 0);
   return AATFunctionCall("allocate",actuals);
 
 }
@@ -65,10 +65,10 @@ AATexpression CallExpression(AATexpressionList actuals, Label name /*, int ArgSi
   return AATFunctionCall( name, actuals);
 }
 
-AATstatement CallStatement(AATexpressionList actuals, Label name/*, int ArgSize*/){
+AATstatement CallStatement(AATexpressionList actuals, Label name, int argMemSize){
   /* need to move SP() down first before function call*/
   /* AATSequential to move down SP(), and attach AATProcedureCall at the end*/
-  return AATProcedureCall( name, actuals);
+  return AATProcedureCall( name, actuals, argMemSize);
 }
 
 AATexpression OperatorExpression(AATexpression left, AATexpression right, AAToperator operator){
@@ -203,6 +203,6 @@ AATstatement SequentialStatement(AATstatement first, AATstatement second){
   return AATSequential(first, second);
 }
 
-AATexpressionList ActualList(AATexpression first, AATexpressionList rest){
-  return AATExpressionList(first, rest);
+AATexpressionList ActualList(AATexpression first, AATexpressionList rest, int size_type, int offset){
+  return AATExpressionList(first, rest, size_type, offset);
 }
