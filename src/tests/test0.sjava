@@ -1,4 +1,5 @@
 void foobar(int a){
+    //int b = a;
     printInt(a);
 }
 void foo(){
@@ -6,6 +7,6 @@ void foo(){
 }
 
 void main()
-{ foobar(10); }
+{ foobar(1111);}
 
 

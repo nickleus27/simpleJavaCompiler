@@ -92,6 +92,8 @@ AATstatement analyzeProgram(ASTprogram program) {
 
   AddBuiltinTypes(typeEnv);
   AddBuiltinFunctions(functionEnv);
+  envEntry printInt = find(functionEnv, "printInt");
+  setArgMemSize(printInt, 16);
   initMemTrackers();
   functionStack = new_stack_env(8, true);
   argStack = new_stack_env(1, false);//only need 1 scope

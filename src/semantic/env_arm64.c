@@ -208,7 +208,7 @@ int pushArgsOnStack(stack_env env, env_sizes mem_sizes){
 *   reset memTotals after this function is called
 */
 void generateArgStackMemory(stack_env env, int totalArgSize){
-    int savedRegs = 3*8;
+    int savedRegs = 4*8;
     //totalArgSize += savedRegs;
     int offset_8 = 0,
     offset_4 = env->mem_sizes->size_8,

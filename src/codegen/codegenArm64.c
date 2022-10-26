@@ -292,7 +292,7 @@ void generateStatement(AATstatement tree) {
       emit("str %s, [%s, #-%d]!", Acc64(), SP(), tree->u.procedureCall.argMemSize);
       addActualsToStack(tree->u.procedureCall.actuals);
       emit("bl %s", tree->u.procedureCall.jump);
-      emit("sub %s, %s, #%d", SP(), SP(), tree->u.procedureCall.argMemSize);
+      emit("add %s, %s, #%d", SP(), SP(), tree->u.procedureCall.argMemSize);
         break;
     case AAT_SEQ:
       generateStatement(tree->u.sequential.left);
@@ -342,6 +342,12 @@ void generateMove(AATstatement tree) {
     }
   } else if (tree->u.move.lhs->kind == AAT_MEMORY) {
     if(tree->u.move.size == 4){
+
+/**
+ * TODO: Problem here!!!
+ * 
+ */
+
       generateExpression64(tree->u.move.lhs->u.memory);
       generateExpression32(tree->u.move.rhs);
       emit("ldr %s, [%s, #%d]", Tmp0_64(), AccSP64(), WORD);//store address in a reg
@@ -399,7 +405,7 @@ void emitSetupCode(void) {
         "str fp, [sp, #16]  //store fp\n"
         "str lr, [sp, #24]  //store lr above fp\n"
         "add fp, sp, #16    //store set fp for this frame\n"
-        "ldr w9, [fp, #20]  //get integer from arg stack space\n"
+        "ldr w9, [fp, #32]  //get integer from arg stack space\n"
         "str w9, [fp, #-4]  //store integer in local var space\n"
 
         "/*check for negative value*/\n"
@@ -427,7 +433,7 @@ void emitSetupCode(void) {
 "        mul w10, w10, w11\n"
 "placeholder_test:\n"
 "        cmp w10, w9\n"
-"        b.lt placeholder_loop\n"
+"        b.le placeholder_loop\n"
         
 "        mov x11, #10\n"
 "        /* need to add checking for division by 0 */\n"
@@ -449,7 +455,7 @@ void emitSetupCode(void) {
 "        sdiv w10, w10, w11\n"
 
 "print_test:\n"
-"        cmp w9, #0\n"
+"        cmp w10, #0\n"
 "        b.ne print_loop\n"
 
 
