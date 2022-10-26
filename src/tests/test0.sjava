@@ -1,9 +1,11 @@
-void main()
-{ int x = 5000; }
-
 void foobar(int a){
-    int b = a+b;
+    printInt(a);
 }
 void foo(){
     foobar(5);
 }
+
+void main()
+{ foobar(10); }
+
+

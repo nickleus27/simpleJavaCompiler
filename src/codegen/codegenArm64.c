@@ -105,13 +105,23 @@ void generateOpExp64(AATexpression tree){
       emit("sub %s, %s, %s", Acc64(), Acc64(), Tmp0_64());
       emit("str %s, [%s, #%d]", Acc64(), AccSP64(), WORD * 2);
       emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD);
-
       break;
     case AAT_MULTIPLY:
-
+      emit("ldr %s, [%s, #%d]", Acc64(), AccSP64(), WORD * 2);
+      emit("ldr %s, [%s, #%d]", Tmp0_64(), AccSP64(), WORD);
+      emit("mul %s, %s, %s", Acc64(), Acc64(), Tmp0_64());
+      emit("str %s, [%s, #%d]", Acc64(), AccSP64(), WORD * 2);
+      emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD);
       break;
     case AAT_DIVIDE:
-
+    /**
+     * TODO: Need to add code to throw error when dividing by ZERO
+     */
+      emit("ldr %s, [%s, #%d]", Acc64(), AccSP64(), WORD * 2);
+      emit("ldr %s, [%s, #%d]", Tmp0_64(), AccSP64(), WORD);
+      emit("sdiv %s, %s, %s", Acc64(), Acc64(), Tmp0_64());
+      emit("str %s, [%s, #%d]", Acc64(), AccSP64(), WORD * 2);
+      emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD);
       break;
     case AAT_LT:
       
@@ -192,13 +202,23 @@ void generateOpExp32(AATexpression tree){
       emit("sub %s, %s, %s", Acc32(), Tmp0_32(), Tmp1_32());
       emit("str %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
       emit("add %s, %s, #%d", AccSP32(), AccSP32(), HALFWORD);
-
       break;
     case AAT_MULTIPLY:
-
+      emit("ldr %s, [%s, #%d]", Tmp0_32(), AccSP32(), WORD);
+      emit("ldr %s, [%s, #%d]", Tmp1_32(), AccSP32(), HALFWORD);
+      emit("mul %s, %s, %s", Acc32(), Tmp0_32(), Tmp1_32());
+      emit("str %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
+      emit("add %s, %s, #%d", AccSP32(), AccSP32(), HALFWORD);
       break;
     case AAT_DIVIDE:
-
+      /**
+     * TODO: Need to add code to throw error when dividing by ZERO
+     */
+      emit("ldr %s, [%s, #%d]", Tmp0_32(), AccSP32(), WORD);
+      emit("ldr %s, [%s, #%d]", Tmp1_32(), AccSP32(), HALFWORD);
+      emit("sdiv %s, %s, %s", Acc32(), Tmp0_32(), Tmp1_32());
+      emit("str %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
+      emit("add %s, %s, #%d", AccSP32(), AccSP32(), HALFWORD);
       break;
     case AAT_LT:
       
@@ -370,6 +390,85 @@ void emitSetupCode(void) {
     emit("mov X0, #0");
     emit("mov X16, #1");
     emit("svc #0x80");
+
+    /*print integer function*/
+    emit(
+        "printInt:\n"
+        "mov x9, sp\n"
+        "str x9, [sp, #-32]!//push down the stack\n"
+        "str fp, [sp, #16]  //store fp\n"
+        "str lr, [sp, #24]  //store lr above fp\n"
+        "add fp, sp, #16    //store set fp for this frame\n"
+        "ldr w9, [fp, #20]  //get integer from arg stack space\n"
+        "str w9, [fp, #-4]  //store integer in local var space\n"
+
+        "/*check for negative value*/\n"
+        "mov w11, #1\n"
+        "lsl w11, w11, #31\n"
+        "and w11, w11, w9\n"
+"sign_test:\n"
+        "cmp w11, #0\n"
+        "b.eq sign_end\n"
+        "mov w11, #45\n"
+        "strb w11, [fp, #-5]\n"
+        "mov    x0, #1           // 1 = StdOut\n"
+        "add    x1, fp, #-5           // point to memory of byte to be written\n"
+        "mov    x2, #1           // length of our string\n"
+        "mov    X16, #4          // Unix write system call\n"
+        "svc    #0x80            // Call kernel to output the string\n"
+        "mov w11, #-1\n"
+        "mul w9, w9, w11\n"
+"sign_end:\n"
+ "       /*set up registers for function */\n"
+ "       mov w10, #1 //placeholder value\n"
+
+"placeholder_loop:\n"
+"        mov w11, #10\n"
+"        mul w10, w10, w11\n"
+"placeholder_test:\n"
+"        cmp w10, w9\n"
+"        b.lt placeholder_loop\n"
+        
+"        mov x11, #10\n"
+"        /* need to add checking for division by 0 */\n"
+"        sdiv w10, w10, w11\n"
+
+"print_loop:\n"
+"        sdiv w11, w9, w10\n"
+"        add w11, w11, #48\n"
+"        strb w11, [fp, #-5]\n"
+"        mov    x0, #1           // 1 = StdOut\n"
+"        add    x1, fp, #-5           // point to memory of byte to be written\n"
+"        mov    x2, #1           // length of our string\n"
+"        mov    X16, #4          // Unix write system call\n"
+"        svc    #0x80            // Call kernel to output the string\n"
+"        sdiv w11, w9, w10\n"
+"        mul w11, w11, w10\n"
+"        sub w9, w9, w11\n"
+"        mov w11, #10\n"
+"        sdiv w10, w10, w11\n"
+
+"print_test:\n"
+"        cmp w9, #0\n"
+"        b.ne print_loop\n"
+
+
+"        /* new line */\n"
+"        mov w11, #10\n"
+"        strb w11, [fp, #-5]\n"
+"        mov    x0, #1           // 1 = StdOut\n"
+"        add    x1, fp, #-5           // point to memory of byte to be written\n"
+"        mov    x2, #1           // length of our string\n"
+"        mov    X16, #4          // Unix write system call\n"
+"        svc    #0x80            // Call kernel to output the string\n"
+
+"printIntEnd:\n"
+"        ldr lr, [fp, #8]  //restore registers\n"
+"        ldr fp, [fp]\n"
+"        ldr x9, [sp]\n"
+"        mov sp, x9\n"
+"        ret\n"
+        );
     /**
      * @brief TODO: make print(d) function on startup
      * 

@@ -21,6 +21,7 @@ To build debug: ```cd src/build && make debug```
 ```Warning!!!: this repo is not complete!!!```
 
 Next Steps:
-1. Print integer function
+1. Data is not being passed correctly between functions
+    ```A. debug code for function calls (memory acces to function arguments)```
 2. Free memory from the AST in semantic.c in post order
 3. heap allocation
