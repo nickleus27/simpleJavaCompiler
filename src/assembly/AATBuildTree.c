@@ -81,7 +81,19 @@ AATstatement functionDefinition(AATstatement body, int framesize, Label start, L
   /**
    *  Need to make sure registers AccSP32() and AccSP64() are being save and restored properly
    */
-  int localVarSize = framesize - 4*8; /* saving 5 registers so 5-1=4, SP starts om 0 offset*/
+  /**
+   * 
+   * 
+   * TODO: make AATstatement AAT_FUNCTIONDEF  that contains:
+   *        * framesize, (localVarSize can be calculated in generateStatement in codeGen.c)
+   *        * labels: start, end (can I squeeze this into a squential satement?)
+   *        * point to tree of statements
+   * 
+   * 
+   * 
+  */
+  //int localVarSize = framesize - 4*8; /* saving 5 registers so 5-1=4, SP starts om 0 offset*/
+  /*
   return
   AATSequential(AATLabel(start),
     AATSequential(AATMove( AATRegister(SP()), AATOperator (AATRegister( SP() ) , _AATConstant( framesize ), AAT_MINUS ), REG),
@@ -112,6 +124,8 @@ AATstatement functionDefinition(AATstatement body, int framesize, Label start, L
       )
     )
   );
+  */
+ return AATFunctionDef(AATSequential(AATLabel(start), AATLabel(end)), body, framesize);
 }
 
 AATstatement ReturnStatement(AATexpression value, Label functionend){

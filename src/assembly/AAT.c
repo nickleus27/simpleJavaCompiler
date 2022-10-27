@@ -109,6 +109,14 @@ AATstatement AATSequential(AATstatement left, AATstatement right) {
   retval->u.sequential.right = right;
   return retval;
 }
+AATstatement AATFunctionDef(AATstatement labels, AATstatement body, int framesize){
+  AATstatement retval = (AATstatement) malloc(sizeof(struct AATstatement_));
+  retval->kind = AAT_FUNCDEF;
+  retval->u.functionDef.labels = labels;
+  retval->u.functionDef.body = body;
+  retval->u.functionDef.framesize = framesize;
+  return retval;
+}
 AATstatement AATEmpty(void) {
   AATstatement retval = (AATstatement) malloc(sizeof(struct AATstatement_));
   retval->kind = AAT_EMPTY;

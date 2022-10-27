@@ -280,6 +280,29 @@ void generateStatement(AATstatement tree) {
     case AAT_CONDITIONALJUMP:
 
         break;
+    case AAT_FUNCDEF:
+    {
+      int localVarSize = tree->u.functionDef.framesize - 4*8; /* saving 5 registers so 5-1=4, SP starts om 0 offset*/
+      generateStatement(tree->u.functionDef.labels->u.sequential.left);
+      /* assembly code fore saving registers and adjusting pointers*/
+      emit("mov %s, %s", Acc64(), SP());
+      emit("str %s, [%s, #-%d]!", Acc64(), SP(), tree->u.functionDef.framesize);
+      emit("str %s, [%s, #%d]", FP(), SP(), localVarSize);
+      emit("add %s, %s, #%d", FP(), SP(), localVarSize);
+      emit("str %s, [%s, #%d]", ReturnAddr(), FP(), WORD);
+      emit("str %s, [%s, #%d]", AccSP32(), FP(), WORD*2);
+      emit("str %s, [%s, #%d]", AccSP64(), FP(), WORD*3);
+      generateStatement(tree->u.functionDef.body);
+      generateStatement(tree->u.functionDef.labels->u.sequential.right);
+      emit("ldr %s, [%s, #%d]", AccSP64(), FP(), WORD*3);
+      emit("ldr %s, [%s, #%d]", AccSP32(), FP(), WORD*2);
+      emit("ldr %s, [%s, #%d]", ReturnAddr(), FP(), WORD);
+      emit("ldr %s, [%s]", FP(), FP());
+      emit("ldr %s, [%s]", Acc64(), SP());
+      emit("mov %s, %s", SP(), Acc64());
+      emit("ret");
+    }
+    break;
     case AAT_PROCEDURECALL:
       /**
        * @brief TODO: adjust stack pointer for argMemSize
@@ -292,7 +315,9 @@ void generateStatement(AATstatement tree) {
       emit("str %s, [%s, #-%d]!", Acc64(), SP(), tree->u.procedureCall.argMemSize);
       addActualsToStack(tree->u.procedureCall.actuals);
       emit("bl %s", tree->u.procedureCall.jump);
-      emit("add %s, %s, #%d", SP(), SP(), tree->u.procedureCall.argMemSize);
+      //emit("add %s, %s, #%d", SP(), SP(), tree->u.procedureCall.argMemSize);
+      emit("str %s, [%s]", Acc64(), SP());
+      emit("mov %s, %s", SP(), Acc64());
         break;
     case AAT_SEQ:
       generateStatement(tree->u.sequential.left);

@@ -1,12 +1,13 @@
 void foobar(int a){
-    //int b = a;
+    //int b = a+5;
     printInt(a);
+    //foo();
 }
 void foo(){
     foobar(5);
 }
 
 void main()
-{ foobar(1111);}
+{ foo();}
 
 

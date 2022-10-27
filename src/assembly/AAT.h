@@ -27,7 +27,9 @@ struct AATexpressionList_ {
 };
 
 struct AATstatement_ {
-  enum {AAT_MOVE, AAT_JUMP, AAT_CONDITIONALJUMP, AAT_PROCEDURECALL, AAT_SEQ, AAT_EMPTY, AAT_LABEL, AAT_RETURN, AAT_HALT} kind; 
+  enum {AAT_MOVE, AAT_JUMP, AAT_CONDITIONALJUMP, AAT_PROCEDURECALL, AAT_SEQ, AAT_EMPTY,
+   AAT_LABEL, AAT_RETURN, AAT_HALT, AAT_FUNCDEF} kind;
+   
   union {
     struct {
       AATexpression lhs;
@@ -48,6 +50,11 @@ struct AATstatement_ {
       AATstatement left;
       AATstatement right;
     } sequential;
+    struct{
+      AATstatement labels; //sequential containing labels
+      AATstatement body;
+      int framesize;
+    }functionDef;
     Label label;
   } u;
 };
@@ -80,6 +87,7 @@ AATstatement AATSequential(AATstatement left, AATstatement right);
 AATstatement AATEmpty(void);
 AATstatement AATReturn(void);
 AATstatement AATHalt(void);
+AATstatement AATFunctionDef(AATstatement labels, AATstatement body, int framesize);
 AATexpression AATMemory(AATexpression mem);
 AATexpression AATOperator(AATexpression left, AATexpression right, AAToperator op);
 AATexpression AATFunctionCall(Label jump, AATexpressionList actuals);
