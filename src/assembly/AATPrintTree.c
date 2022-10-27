@@ -52,6 +52,22 @@ void printAAT(AATstatement body) {
     printAATexp(body->u.conditionalJump.test);
     AATindent--;
     break;
+  case AAT_FUNCDEF:
+    printf("Function Definition:\n");
+    printAAT(body->u.functionDef.labels->u.sequential.left);
+    AATindent++;
+    printAATindent(AATindent);
+    printf("Stack frame size: %d\n", body->u.functionDef.framesize);
+    printAATindent(AATindent);
+    printf("PUSH ON STACK: LR, FP, SP, and SAVED REGS \n");
+    printAAT(body->u.functionDef.body);
+    AATindent--;
+    printAAT(body->u.functionDef.labels->u.sequential.right);
+    AATindent++;
+    printAATindent(AATindent);
+    printf("POP STACK.\n");
+    AATindent--;
+    break;
   case AAT_PROCEDURECALL:
     printAATindent(AATindent);
     printf("PROCEDURE CALL: %s\n",body->u.procedureCall.jump);

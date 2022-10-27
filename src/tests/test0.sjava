@@ -1,13 +1,14 @@
-void foobar(int a){
-    //int b = a+5;
-    printInt(a);
+void foobar(int a, int b){
+    int c = 10+5;
+    printInt(c);
+    printInt(b);
     //foo();
 }
 void foo(){
-    foobar(5);
+    foobar(5, 10);
 }
 
 void main()
-{ foo();}
+{ foo(); }
 
 
