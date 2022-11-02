@@ -17,6 +17,7 @@ typedef enum {AAT_PLUS, AAT_MINUS, AAT_MULTIPLY, AAT_DIVIDE, AAT_LT,
               AAT_NOT} AAToperator;
               */
 
+/*statements*/
 AATstatement functionDefinition(AATstatement body, int framesize, Label start, Label end);
 AATstatement IfStatement(AATexpression test, AATstatement ifbody, AATstatement elsebody);
 AATstatement WhileStatement(AATexpression test, AATstatement whilebody);
@@ -28,12 +29,13 @@ AATstatement AssignmentStatement(AATexpression lhs, AATexpression rhs, int size)
 AATstatement SequentialStatement(AATstatement first, AATstatement second);
 AATstatement ReturnStatement(AATexpression value, Label functionend);
 
+/*expressions*/
 AATexpression Allocate(AATexpression size);
-AATexpression BaseVariable(int* offset);
-AATexpression ArrayVariable(AATexpression base, AATexpression index, int elementSize);
-AATexpression ClassVariable(AATexpression base, int offset);
-AATexpression ConstantExpression(int value);
-AATexpression OperatorExpression(AATexpression left, AATexpression right, AAToperator operator);
-AATexpression CallExpression(AATexpressionList actuals, Label name);
+AATexpression BaseVariable(int* offset, int size_type);
+AATexpression ArrayVariable(AATexpression base, AATexpression index, int elementSize, int size_type);
+AATexpression ClassVariable(AATexpression base, int offset, int size_type);
+AATexpression ConstantExpression(int value, int size_type);
+AATexpression OperatorExpression(AATexpression left, AATexpression right, AAToperator operator, int size_type);
+AATexpression CallExpression(AATexpressionList actuals, Label name, int size_type);
 
 AATexpressionList ActualList(AATexpression first, AATexpressionList rest, int size_type, int offset);

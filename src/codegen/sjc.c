@@ -39,6 +39,14 @@ ASTprogram parse(char *filename) {
 int main(int argc, char **argv) {
   FILE *output;
   char *outfilename;
+  int asCmdStrSize = 12;
+  int ldCmdStrSize = 88;
+  int nameSize = 0;
+  const char *exe = ".out ";
+  const char *as = "as -o ";
+  const char *ld = "ld -o ";
+  const char *ldPost = " -lSystem -syslibroot `xcrun -sdk macosx --show-sdk-path` -e _start -arch arm64";
+
   
   ASTprogram program;
   AATstatement assem;
@@ -49,6 +57,7 @@ int main(int argc, char **argv) {
   outfilename = (char *) malloc((strlen(argv[1]) + 3) * sizeof(char));
   strcpy(outfilename,argv[1]);
   strcat(outfilename,".s");
+  nameSize = strlen(argv[1]);
   
   program = parse(argv[1]);
   if (program != NULL) {
@@ -62,7 +71,25 @@ int main(int argc, char **argv) {
       printAAT(assem);
       output = fopen(outfilename, "w");
       generateCode(assem, output);
-      
+      char asCmd[nameSize*2+asCmdStrSize+1];
+      strcpy(asCmd, as);
+      strcat(asCmd, argv[1]);
+      strcat(asCmd, ".o ");
+      strcat(asCmd, outfilename);
+      printf("%s\n", asCmd);
+      //if(system(asCmd)==0){
+        char ldCmd[nameSize*2+ldCmdStrSize+1];
+        strcpy(ldCmd, ld);
+        strcat(ldCmd, argv[1]);
+        strcat(ldCmd, exe);
+        strcat(ldCmd, argv[1]);
+        strcat(ldCmd, ".o");
+        strcat(ldCmd, ldPost);
+        printf("%s\n", ldCmd);
+      //  system(ldCmd);
+      //}else{
+      //  printf("Cmd as -o was not successful");
+      //}
     } else {
       printf("# of errors = %d",numErrors());
     }

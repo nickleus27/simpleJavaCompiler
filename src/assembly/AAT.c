@@ -134,45 +134,51 @@ AATstatement AATHalt(void) {
   return retval;
 }
 
-AATexpression AATMemory(AATexpression memory){
+AATexpression AATMemory(AATexpression memory, int size_type){
   AATexpression retval = (AATexpression) malloc(sizeof(struct AATexpression_));
   retval->kind = AAT_MEMORY;
+  retval->size_type = size_type;
   retval->u.memory = memory;
   return retval;
 }
 
-AATexpression AATOperator(AATexpression left, AATexpression right, AAToperator op) {
+AATexpression AATOperator(AATexpression left, AATexpression right, AAToperator op, int size_type) {
   AATexpression retval = (AATexpression) malloc(sizeof(struct AATexpression_));
   retval->kind = AAT_OPERATOR;
+  retval->size_type = size_type;
   retval->u.operator.left = left;
   retval->u.operator.right = right;
   retval->u.operator.op = op;
   return retval;
 }
-AATexpression AATFunctionCall(Label jump, AATexpressionList actuals) {
+AATexpression AATFunctionCall(Label jump, AATexpressionList actuals, int size_type) {
   AATexpression retval = (AATexpression) malloc(sizeof(struct AATexpression_));
   retval->kind = AAT_FUNCTIONCALL;
+  retval->size_type = size_type;
   retval->u.functionCall.jump = jump;
   retval->u.functionCall.actuals = actuals;
   return retval;
 }
-AATexpression _AATConstant(int constant){
+AATexpression _AATConstant(int constant, int size_type){
   AATexpression retval = (AATexpression) malloc(sizeof(struct AATexpression_));
   retval->kind = AAT_CONSTANT;
+  retval->size_type = size_type;
   /*TODO: need to free this memory*/
   retval->u.constant = (int*)malloc(sizeof(int));
   *retval->u.constant = constant;
   return retval;
 }
-AATexpression AATConstant(int* constant) {
+AATexpression AATConstant(int* constant, int size_type) {
   AATexpression retval = (AATexpression) malloc(sizeof(struct AATexpression_));
   retval->kind = AAT_CONSTANT;
+  retval->size_type = size_type;
   retval->u.constant = constant;
   return retval;
 }
-AATexpression AATRegister(Register reg){
+AATexpression AATRegister(Register reg, int size_type){
   AATexpression retval = (AATexpression) malloc(sizeof(struct AATexpression_));
   retval->kind = AAT_REGISTER;
+  retval->size_type = size_type;
   retval->u.reg = reg;
   return retval;
 }

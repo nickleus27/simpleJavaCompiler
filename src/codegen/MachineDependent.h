@@ -13,6 +13,11 @@
     #define INT 4
     #define PTR 8
     #define REG 8
+    #define REG64 8
+    #define REG32 4
+    #define BYTE 1
+    #define WORD 8
+    #define HALFWORD 4
     #define EXPR_STACKSIZE 2048
 #endif
 

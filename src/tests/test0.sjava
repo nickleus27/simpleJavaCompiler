@@ -1,7 +1,8 @@
 void foobar(int a, int b){
-    int c = 10+5;
-    printInt(c);
+    int c = a+b;
+    printInt(a);
     printInt(b);
+    printInt(c);
     //foo();
 }
 void foo(){

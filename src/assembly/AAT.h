@@ -61,9 +61,11 @@ struct AATstatement_ {
 
 struct AATexpression_ {
   enum {AAT_MEMORY, AAT_OPERATOR, AAT_FUNCTIONCALL, AAT_CONSTANT, AAT_REGISTER} kind;
+  int size_type;
   union {
-    AATexpression memory; /* todo {AATexpression mem, int size_type}memory */
-    int* constant; /* todo struct { int const, int size_type}constant */
+    int* constant;
+    Register reg;
+    AATexpression memory;
     struct {
       AATexpression left;
       AATexpression right;
@@ -73,10 +75,10 @@ struct AATexpression_ {
       Label jump;
       AATexpressionList actuals;
     } functionCall;
-    Register reg; /* todo struct {int reg, int size_type}register */
   } u;
 };
 
+/*statements*/
 AATexpressionList AATExpressionList(AATexpression first, AATexpressionList rest, int size_type, int offset);
 AATstatement AATMove(AATexpression lhs, AATexpression rhs, int size);
 AATstatement AATLabel(Label);
@@ -88,16 +90,18 @@ AATstatement AATEmpty(void);
 AATstatement AATReturn(void);
 AATstatement AATHalt(void);
 AATstatement AATFunctionDef(AATstatement labels, AATstatement body, int framesize);
-AATexpression AATMemory(AATexpression mem);
-AATexpression AATOperator(AATexpression left, AATexpression right, AAToperator op);
-AATexpression AATFunctionCall(Label jump, AATexpressionList actuals);
-AATexpression AATConstant(int* constant);
-AATexpression AATRegister(Register reg);
+
+/*expressions*/
+AATexpression AATConstant(int* constant, int size_type);
+AATexpression _AATConstant(int constant, int size_type);
+AATexpression AATRegister(Register reg, int size_type);
+AATexpression AATMemory(AATexpression mem, int size_type);
+AATexpression AATOperator(AATexpression left, AATexpression right, AAToperator op, int size_type);
+AATexpression AATFunctionCall(Label jump, AATexpressionList actuals, int size_type);
 
 /* statement stack functions */
 void AATpush(AATstatement stm);
 AATstatement AATpop(void);
 void AATseqStmCleanUp(AATstatement seqEnd);
-AATexpression _AATConstant(int constant);
 
 #endif

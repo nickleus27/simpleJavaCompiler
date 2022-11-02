@@ -16,122 +16,79 @@
 
 /*------------------> Expressions <------------------*/
 AATexpression Allocate(AATexpression size) {
-  AATexpressionList actuals = AATExpressionList(size, NULL, 0, 0);
-  return AATFunctionCall("allocate",actuals);
+  /**
+   * TODO: Need to get offset right in AATExpressionList call below
+   * 
+   */
+  AATexpressionList actuals = AATExpressionList(size, NULL, REG64, 0);
+  return AATFunctionCall("allocate",actuals, PTR);
 
 }
 
-/* remember to add offset to envEntry every time a variable is entered into environment */
-/* cmd+f : "VarEntry" and add variable offsets. */
-/* ??? do formals have a positive offset ??? */
-AATexpression ClassVariable(AATexpression base, int offset){
+AATexpression ClassVariable(AATexpression base, int offset, int size_type){
+  /**
+   * TODO: Need to come back and check that the size_types are correct for registers and memory
+   * compatibility. Double check in analyzeVar in semantic.c too.
+   */
   if ( offset ){
-    return AATMemory( AATOperator(base, _AATConstant(offset), AAT_MINUS) );
+    return AATMemory( AATOperator(base, _AATConstant(offset, REG64), AAT_MINUS, REG64), size_type);
   }
   else
-    return AATMemory( base ); /* if no offset do not need to subtract from memory */
+    return AATMemory( base, size_type ); /* if no offset do not need to subtract from memory */
 }
 
-/* remember to add offset to envEntry every time a variable is entered into environment */
-/* cmd+f : "VarEntry" and add variable offsets. */
-AATexpression ArrayVariable(AATexpression base, AATexpression index, int elementSize){
-  return AATMemory( 
-    AATOperator(base, 
-      AATOperator(_AATConstant(elementSize),index, AAT_MULTIPLY), 
-    AAT_MINUS)
+AATexpression ArrayVariable(AATexpression base, AATexpression index, int elementSize, int size_type){
+  /**
+   * TODO: Need to come back and check that the size_types are correct for registers and memory
+   * compatibility. Double check in analyzeVar in semantic.c too.
+   */
+  return 
+    AATMemory( 
+      AATOperator(base, 
+        AATOperator(_AATConstant(elementSize, REG64),index, AAT_MULTIPLY, REG64), 
+      AAT_PLUS, REG64), 
+    size_type
   );
   /* if index == 0 than element size * 0 will == 0; */
 }
 
-/* remember to add offset to envEntry every time a variable is entered into environment */
-/* cmd+f : "VarEntry" and add variable offsets. */
-AATexpression BaseVariable(int* offset){
-  return AATMemory( AATOperator(AATRegister( FP() ),AATConstant( offset ), AAT_PLUS ) );
+AATexpression BaseVariable(int* offset, int size_type){
+  return AATMemory( AATOperator(AATRegister( FP(), REG64),AATConstant( offset, REG64 ), AAT_PLUS, REG64), size_type);
 }
 
-AATexpression ConstantExpression(int value){
-  /*
-  int* val = (int*)malloc(sizeof(int));
-  *val = value;
-  return AATConstant(val);
-  */
- return _AATConstant(value);
+AATexpression ConstantExpression(int value, int size_type){
+ return _AATConstant(value, size_type);
 }
 
-/*needs work. need to push args on stack */
-AATexpression CallExpression(AATexpressionList actuals, Label name /*, int ArgSize*/){
-  /* need to move SP() down first before function call*/
-  /* AATSequential to move down SP(), and attach AATFunctionCall at the end*/
-  return AATFunctionCall( name, actuals);
+AATexpression CallExpression(AATexpressionList actuals, Label name, int size_type){
+  return AATFunctionCall( name, actuals, size_type);
 }
 
 AATstatement CallStatement(AATexpressionList actuals, Label name, int argMemSize){
-  /* need to move SP() down first before function call*/
-  /* AATSequential to move down SP(), and attach AATProcedureCall at the end*/
   return AATProcedureCall( name, actuals, argMemSize);
 }
 
-AATexpression OperatorExpression(AATexpression left, AATexpression right, AAToperator operator){
-  return AATOperator(left, right,  operator);
+AATexpression OperatorExpression(AATexpression left, AATexpression right, AAToperator operator, int size_type){
+  return AATOperator(left, right, operator, size_type);
 }
 
 /*------------------> Statements <------------------*/
 AATstatement functionDefinition(AATstatement body, int framesize, Label start, Label end){
   /* framesize * WORDSIZE + saved registers + (LR, FP, SP) */
-  /**
-   *  Need to make sure registers AccSP32() and AccSP64() are being save and restored properly
-   */
-  /**
-   * 
-   * 
-   * TODO: make AATstatement AAT_FUNCTIONDEF  that contains:
-   *        * framesize, (localVarSize can be calculated in generateStatement in codeGen.c)
-   *        * labels: start, end (can I squeeze this into a squential satement?)
-   *        * point to tree of statements
-   * 
-   * 
-   * 
-  */
   //int localVarSize = framesize - 4*8; /* saving 5 registers so 5-1=4, SP starts om 0 offset*/
-  /*
-  return
-  AATSequential(AATLabel(start),
-    AATSequential(AATMove( AATRegister(SP()), AATOperator (AATRegister( SP() ) , _AATConstant( framesize ), AAT_MINUS ), REG),
-      AATSequential(AATMove( AATMemory( AATRegister( SP() ) ), AATOperator (AATRegister( SP() ) , _AATConstant( framesize ), AAT_PLUS ), REG),
-        AATSequential(AATMove( AATMemory( AATOperator(AATRegister( SP() ), _AATConstant( localVarSize ), AAT_PLUS ) ), AATRegister( FP() ), REG),
-          AATSequential(AATMove( AATRegister(FP()), AATOperator(AATRegister( SP() ), _AATConstant( localVarSize ), AAT_PLUS ), REG),
-            AATSequential(AATMove( AATMemory( AATOperator(AATRegister( FP() ), _AATConstant( REG ), AAT_PLUS ) ), AATRegister( ReturnAddr() ), REG),
-              AATSequential(AATMove( AATMemory( AATOperator(AATRegister( FP() ), _AATConstant( 2* REG ), AAT_PLUS ) ), AATRegister( AccSP32() ), REG),
-                AATSequential(AATMove( AATMemory( AATOperator(AATRegister( FP() ), _AATConstant( 3* REG ), AAT_PLUS ) ), AATRegister( AccSP64() ), REG),
-                  AATSequential(body,
-                    AATSequential(AATLabel(end),
-                      AATSequential(AATMove(AATRegister(AccSP64()), AATMemory( AATOperator(AATRegister(FP()), _AATConstant( 3* REG ), AAT_PLUS)), REG),
-                        AATSequential(AATMove(AATRegister(AccSP32()), AATMemory( AATOperator(AATRegister(FP()), _AATConstant( 2* REG ), AAT_PLUS)), REG),
-                          AATSequential(AATMove(AATRegister(ReturnAddr()), AATMemory( AATOperator(AATRegister(FP()), _AATConstant( REG ), AAT_PLUS)), REG),
-                            AATSequential(AATMove(AATRegister(FP()), AATMemory(AATRegister(FP())), REG),
-                              AATSequential(AATMove(AATRegister(SP()), AATMemory( AATRegister(SP())), REG), AATReturn())
-                            )
-                          )
-                        )    
-                      )
-                    )
-                  )
-                )
-              )
-            )
-          )
-        )
-      )
-    )
-  );
-  */
  return AATFunctionDef(AATSequential(AATLabel(start), AATLabel(end)), body, framesize);
 }
 
-AATstatement ReturnStatement(AATexpression value, Label functionend){
+AATstatement ReturnStatement(AATexpression value, Label functionend, int size_type){
   /* need to check for size type to return?*/
   /* need to make if statement for 32 bit and 64 bit*/
-  return AATSequential(AATMove(AATRegister(Result32()), value, INT), AATJump(functionend));
+  if(size_type==PTR){
+    return AATSequential(AATMove(AATRegister(Result64(), PTR), value, PTR), AATJump(functionend));
+  }else if(size_type==INT){
+    return AATSequential(AATMove(AATRegister(Result32(), INT), value, INT), AATJump(functionend));
+  }else{
+    return AATSequential(AATMove(AATRegister(Result32(), BOOL), value, BOOL), AATJump(functionend));
+  }
 }
 
 AATstatement DoWhileStatement(AATexpression test, AATstatement dowhilebody){

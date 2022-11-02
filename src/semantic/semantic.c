@@ -366,13 +366,13 @@ AATexpressionList _analyzeCallExp(environment typeEnv, environment functionEnv, 
     expRec = analyzeExpression(typeEnv, functionEnv, varEnv, expList->first);
     if (  expRec.typ != formalList->first)
       Error( exp->line, " %s expression does not match function definition", exp->u.callExp.name);
-      return ActualList(ConstantExpression(0), actuals, formalList->first->size_type, *formalList->offset);
+      return ActualList(ConstantExpression(0, 0), actuals, formalList->first->size_type, *formalList->offset);
   }else if ( !expList && formalList){
     Error( exp->line, " formals do not match function prototype" );
-    return ActualList(ConstantExpression(0), actuals, formalList->first->size_type, *formalList->offset);
+    return ActualList(ConstantExpression(0, 0), actuals, formalList->first->size_type, *formalList->offset);
   }else if ( expList && !formalList){
     Error( exp->line, " formals do not match function prototype" );
-    return ActualList(ConstantExpression(0), actuals, 0, 0);
+    return ActualList(ConstantExpression(0, 0), actuals, 0, 0);
   }
   return ActualList(expRec.tree, actuals, formalList->first->size_type, *formalList->offset);
 }
@@ -383,17 +383,22 @@ expressionRec analyzeCallExp(environment typeEnv, environment functionEnv, envir
   envEntry function = find( functionEnv, exp->u.callExp.name);
   if(!function){
     Error(exp->line," %s function not defined", exp->u.callExp.name);
-    return ExpressionRec(NULL, ConstantExpression(0));
+    return ExpressionRec(NULL, ConstantExpression(0, 0));
   }
   AATexpressionList actuals = _analyzeCallExp( typeEnv, functionEnv, varEnv, exp, exp->u.callExp.actuals,
     function->u.functionEntry.formals );
   if (! function->u.functionEntry.returntyp ){
     Error(exp->line," return type is not a defined type");
-    return ExpressionRec(NULL, ConstantExpression(0));
+    return ExpressionRec(NULL, ConstantExpression(0, 0));
   }
-  if( function->u.functionEntry.returntyp == VoidType())
-    Error(exp->line," %s void type can not be used as a expression", exp->u.callExp.name);
-  return ExpressionRec( function->u.functionEntry.returntyp, CallExpression(actuals , function->u.functionEntry.startLabel));
+  if( function->u.functionEntry.returntyp == VoidType()){
+    Error(exp->line," %s void type can not be used as an expression", exp->u.callExp.name);
+    /**
+     * TODO: Should I return an ExpressionRec here for Void Type?
+     */
+  }
+  return ExpressionRec( function->u.functionEntry.returntyp, CallExpression(actuals , function->u.functionEntry.startLabel,
+    function->u.functionEntry.returntyp->size_type));
 }
 
 AATexpressionList analyzeCallStm(environment typeEnv, environment functionEnv, environment varEnv, ASTstatement statement){
@@ -472,38 +477,41 @@ AATstatement analyzeStatement(environment typeEnv, environment functionEnv, envi
     break;
     case VarDecStm:
     {
+      /* check variable type*/
+      envEntry varType = find(typeEnv, statement->u.varDecStm.type);
+      envEntry varScope;
+      if ( varType ){
 
-      /* needs some work !!! */
-      envEntry varType = find(typeEnv, statement->u.varDecStm.type), varScope;
-      if ( varType ){ 
+        /* check for array type and enter into type env */
         if( statement->u.varDecStm.arraydimension ){
-          /* check for array type and enter into type env */
           varType = enterArrayTypesDectStm(typeEnv, varType, statement);
         }
+
         /* check if variable is already declared in this scope */
         varScope = find(varEnv, statement->u.varDecStm.name);
         if(varScope && varScope->u.varEntry.scope == getScope(varEnv))
           Error(statement->line, "redefinition of '%s'", statement->u.varDecStm.name);
 
-
         /* enter variable here */
         enter( varEnv, statement->u.varDecStm.name, VarEntry( varType->u.typeEntry.typ, varType->u.typeEntry.typ->size_type ) );
-       // offset += varType->u.typeEntry.typ->size_type;
         envEntry LHS = find(varEnv, statement->u.varDecStm.name);
         enter_arm64(functionStack, LHS->u.varEntry.scope, LHS->u.varEntry.offset);
 
-        if( statement->u.varDecStm.init ){/* check initialization types match */
+        /* check initialization types match */
+        if( statement->u.varDecStm.init ){
           expressionRec RHS;
           RHS = analyzeExpression(typeEnv,functionEnv,varEnv, statement->u.varDecStm.init);
           if (LHS->u.varEntry.typ != RHS.typ) {
             Error(statement->line," Type mismatch on assignment");
           }
-          return AssignmentStatement( BaseVariable(LHS->u.varEntry.offset), RHS.tree, LHS->u.varEntry.typ->size_type );
+          return AssignmentStatement( BaseVariable(LHS->u.varEntry.offset, LHS->u.varEntry.typ->size_type),
+            RHS.tree, LHS->u.varEntry.typ->size_type );
         }
-        return AssignmentStatement(BaseVariable(LHS->u.varEntry.offset), ConstantExpression(0), LHS->u.varEntry.typ->size_type );
+        return AssignmentStatement(BaseVariable(LHS->u.varEntry.offset,  LHS->u.varEntry.typ->size_type),
+          ConstantExpression(0, LHS->u.varEntry.typ->size_type), LHS->u.varEntry.typ->size_type );
       }else{
         Error(statement->line," %s type not defined", statement->u.varDecStm.type);
-        return AssignmentStatement(ConstantExpression(0), ConstantExpression(0), 0);
+        return AssignmentStatement(ConstantExpression(0, 0), ConstantExpression(0, 0), 0);
       }
     }
     break;
@@ -605,13 +613,17 @@ AATstatement analyzeStatement(environment typeEnv, environment functionEnv, envi
   }
 }
 
+/**
+ * TODO: Check that variable scope checking is still working!
+ */
+
 expressionRec analyzeNewExp(environment typeEnv, ASTexpression exp){
     envEntry expType = find(typeEnv, exp->u.newExp.name);
-    if( !expType ) return ExpressionRec( NULL, ConstantExpression(0));
-    if( expType->u.typeEntry.typ->kind != class_type) return ExpressionRec( NULL, ConstantExpression(0));
+    if( !expType ) return ExpressionRec( NULL, ConstantExpression(0, 0));
+    if( expType->u.typeEntry.typ->kind != class_type) return ExpressionRec( NULL, ConstantExpression(0, 0));
     /*need to update envSize function to calculate correct memory size*/
     return ExpressionRec( expType->u.typeEntry.typ, Allocate( 
-      ConstantExpression( envSize(expType->u.typeEntry.typ->u.class.instancevars) )));
+      ConstantExpression( envSize(expType->u.typeEntry.typ->u.class.instancevars), REG64)));
 }
 
 expressionRec analyzeNewArray(environment typeEnv, environment functionEnv, environment varEnv, ASTexpression exp){
@@ -634,17 +646,18 @@ expressionRec analyzeNewArray(environment typeEnv, environment functionEnv, envi
   if( expRec.typ != IntegerType())
     Error(exp->line, " Array size must be an integer");
   expType = find(typeEnv, key);
-  if( !expType ) return ExpressionRec(NULL, ConstantExpression(0));
+  if( !expType ) return ExpressionRec(NULL, ConstantExpression(0, 0));
   return ExpressionRec(expType->u.typeEntry.typ, Allocate(OperatorExpression(
-    expRec.tree, ConstantExpression(expType->u.typeEntry.typ->u.array->size_type), AAT_MULTIPLY)));
+    expRec.tree, ConstantExpression(expType->u.typeEntry.typ->u.array->size_type, expType->u.typeEntry.typ->u.array->size_type),
+    AAT_MULTIPLY, expType->u.typeEntry.typ->u.array->size_type)));
 }
 
 expressionRec analyzeExpression(environment typeEnv, environment functionEnv, environment varEnv, ASTexpression exp) {
   switch(exp->kind) {
   case IntLiteralExp:
-    return ExpressionRec( IntegerType(), ConstantExpression(exp->u.intLiteralExp.value));
+    return ExpressionRec( IntegerType(), ConstantExpression(exp->u.intLiteralExp.value, INT));
   case BoolLiteralExp:
-    return ExpressionRec( BooleanType(), ConstantExpression(exp->u.boolLiteralExp.value));
+    return ExpressionRec( BooleanType(), ConstantExpression(exp->u.boolLiteralExp.value, BOOL));
   case OpExp:
     return analyzeOpExpression(typeEnv,functionEnv, varEnv, exp);
   case VarExp:
@@ -657,7 +670,7 @@ expressionRec analyzeExpression(environment typeEnv, environment functionEnv, en
     return analyzeNewArray(typeEnv, functionEnv, varEnv, exp);
   default:
     Error(exp->line," Bad Expression");
-    return ExpressionRec( IntegerType(), ConstantExpression(0));
+    return ExpressionRec( IntegerType(), ConstantExpression(0, 0));
   }
 }
 
@@ -678,9 +691,9 @@ expressionRec analyzeVar(environment typeEnv, environment functionEnv, environme
       if ( !baseEntry ){
         /* return ExpressionRec(IntegerType(),NULL); */
         Error(var->line," Variable %s not defined",var->u.baseVar.name);
-        return ExpressionRec(NULL, ConstantExpression(0));
+        return ExpressionRec(NULL, ConstantExpression(0, 0));
       }
-      return ExpressionRec(baseEntry->u.varEntry.typ, BaseVariable(baseEntry->u.varEntry.offset));
+      return ExpressionRec(baseEntry->u.varEntry.typ, BaseVariable(baseEntry->u.varEntry.offset, baseEntry->u.varEntry.typ->size_type));
       break;
     case ArrayVar:
       baseType = analyzeVar(typeEnv, functionEnv, varEnv, var->u.arrayVar.base);
@@ -689,14 +702,14 @@ expressionRec analyzeVar(environment typeEnv, environment functionEnv, environme
       if(!baseType.typ){ 
         Error(var->line," Variable type is not array type");
         /* return ExpressionRec(IntegerType(),NULL); */
-        return ExpressionRec(NULL, ConstantExpression(0));
+        return ExpressionRec(NULL, ConstantExpression(0, 0));
       }
       if(baseType.typ->kind != array_type){
         Error(var->line," Variable type is not array type");
         /* return ExpressionRec(IntegerType(),NULL); */
-        return ExpressionRec(NULL, ConstantExpression(0));
+        return ExpressionRec(NULL, ConstantExpression(0, 0));
       }
-      return ExpressionRec(baseType.typ->u.array, ArrayVariable(baseType.tree, indexExp, baseType.typ->size_type)); 
+      return ExpressionRec(baseType.typ->u.array, ArrayVariable(baseType.tree, indexExp, baseType.typ->size_type, baseType.typ->size_type)); 
     break;
     case ClassVar:
       baseType = analyzeVar(typeEnv, functionEnv, varEnv, var->u.classVar.base);
@@ -705,12 +718,12 @@ expressionRec analyzeVar(environment typeEnv, environment functionEnv, environme
         if ( !baseEntry ){
           Error(var->line," Variable %s not defined", var->u.classVar.instance);
           /* return ExpressionRec(IntegerType(),NULL); */
-          return ExpressionRec(NULL, ConstantExpression(0));
+          return ExpressionRec(NULL, ConstantExpression(0, 0));
         }
-        return ExpressionRec(baseEntry->u.varEntry.typ, ClassVariable(baseType.tree, *baseEntry->u.varEntry.offset));
+        return ExpressionRec(baseEntry->u.varEntry.typ, ClassVariable(baseType.tree, *baseEntry->u.varEntry.offset, baseEntry->u.varEntry.typ->size_type));
       }else{
         /* return ExpressionRec(IntegerType(),NULL); */
-        return ExpressionRec(NULL, ConstantExpression(0));
+        return ExpressionRec(NULL, ConstantExpression(0, 0));
       }
     break;
     default:
@@ -730,7 +743,7 @@ expressionRec analyzeOpExpression(environment typeEnv, environment functionEnv, 
       expressionRec RHS = analyzeExpression(typeEnv,functionEnv,varEnv,exp->u.opExp.right);
       if ((LHS.typ != IntegerType()) || (RHS.typ != IntegerType())) 
 	      Error(exp->line," Both arguments to + must be integers");
-      return ExpressionRec(IntegerType(),OperatorExpression(LHS.tree,RHS.tree,AAT_PLUS));
+      return ExpressionRec(IntegerType(),OperatorExpression(LHS.tree,RHS.tree,AAT_PLUS,INT));
     } 
     break;
   case AST_MINUS:
@@ -739,7 +752,7 @@ expressionRec analyzeOpExpression(environment typeEnv, environment functionEnv, 
     expressionRec RHS = analyzeExpression(typeEnv,functionEnv,varEnv,exp->u.opExp.right);
     if ((LHS.typ != IntegerType()) || (RHS.typ != IntegerType())) 
       Error(exp->line," Both arguments to - must be integers");
-    return ExpressionRec(IntegerType(),OperatorExpression(LHS.tree,RHS.tree,AAT_MINUS));
+    return ExpressionRec(IntegerType(),OperatorExpression(LHS.tree,RHS.tree,AAT_MINUS,INT));
     } 
     break;
   case AST_MULTIPLY:
@@ -748,7 +761,7 @@ expressionRec analyzeOpExpression(environment typeEnv, environment functionEnv, 
     expressionRec RHS = analyzeExpression(typeEnv,functionEnv,varEnv,exp->u.opExp.right);
     if ((LHS.typ != IntegerType()) || (RHS.typ != IntegerType())) 
       Error(exp->line," Both arguments to * must be integers");
-    return ExpressionRec(IntegerType(),OperatorExpression(LHS.tree,RHS.tree,AAT_MULTIPLY));
+    return ExpressionRec(IntegerType(),OperatorExpression(LHS.tree,RHS.tree,AAT_MULTIPLY,INT));
     } 
     break;
   case AST_DIVIDE:
@@ -757,7 +770,7 @@ expressionRec analyzeOpExpression(environment typeEnv, environment functionEnv, 
     expressionRec RHS = analyzeExpression(typeEnv,functionEnv,varEnv,exp->u.opExp.right);
     if ((LHS.typ != IntegerType()) || (RHS.typ != IntegerType())) 
       Error(exp->line," Both arguments to / must be integers");
-    return ExpressionRec(IntegerType(),OperatorExpression(LHS.tree,RHS.tree,AAT_DIVIDE));
+    return ExpressionRec(IntegerType(),OperatorExpression(LHS.tree,RHS.tree,AAT_DIVIDE,INT));
     } 
     break;
   case AST_EQ: /* add pointer equality checking */
@@ -765,11 +778,11 @@ expressionRec analyzeOpExpression(environment typeEnv, environment functionEnv, 
     expressionRec LHS = analyzeExpression(typeEnv,functionEnv,varEnv,exp->u.opExp.left);
     expressionRec RHS = analyzeExpression(typeEnv,functionEnv,varEnv,exp->u.opExp.right);
     if (LHS.typ == IntegerType() && RHS.typ == IntegerType()) 
-      return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_EQ));
+      return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_EQ,INT));
     if (LHS.typ == BooleanType() && RHS.typ == BooleanType()) 
-      return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_EQ));
+      return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_EQ,BOOL));
     Error(exp->line," Both arguments to == must be the same type");
-      return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_EQ));
+      return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_EQ,0));
     } 
     break;
   case AST_NEQ: /* add checking for char type and pointer type */
@@ -777,47 +790,47 @@ expressionRec analyzeOpExpression(environment typeEnv, environment functionEnv, 
     expressionRec LHS = analyzeExpression(typeEnv,functionEnv,varEnv,exp->u.opExp.left);
     expressionRec RHS = analyzeExpression(typeEnv,functionEnv,varEnv,exp->u.opExp.right);
     if (LHS.typ == IntegerType() && RHS.typ == IntegerType()) 
-      return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_NEQ));
+      return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_NEQ,INT));
     if (LHS.typ == BooleanType() && RHS.typ == BooleanType()) 
-      return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_NEQ));
+      return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_NEQ,BOOL));
     Error(exp->line," Both arguments to == must be the same type");
-    return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_NEQ));
+    return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_NEQ,0));
     break;
     }
-  case AST_LT:
+  case AST_LT: /* add functionality for chars (ascii values) */
     {
     expressionRec LHS = analyzeExpression(typeEnv,functionEnv,varEnv,exp->u.opExp.left);
     expressionRec RHS = analyzeExpression(typeEnv,functionEnv,varEnv,exp->u.opExp.right);
     if ((LHS.typ != IntegerType()) || (RHS.typ != IntegerType())) 
       Error(exp->line," Both arguments to < must be integers");
-    return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_LT));
+    return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_LT,INT));
     } 
     break;
-  case AST_LEQ:
+  case AST_LEQ: /* add functionality for chars (ascii values) */
     {
     expressionRec LHS = analyzeExpression(typeEnv,functionEnv,varEnv,exp->u.opExp.left);
     expressionRec RHS = analyzeExpression(typeEnv,functionEnv,varEnv,exp->u.opExp.right);
     if ((LHS.typ != IntegerType()) || (RHS.typ != IntegerType())) 
       Error(exp->line," Both arguments to <= must be integers");
-    return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_LEQ));
+    return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_LEQ,INT));
     } 
     break;
-  case AST_GT:
+  case AST_GT: /* add functionality for chars (ascii values) */
     {
     expressionRec LHS = analyzeExpression(typeEnv,functionEnv,varEnv,exp->u.opExp.left);
     expressionRec RHS = analyzeExpression(typeEnv,functionEnv,varEnv,exp->u.opExp.right);
     if ((LHS.typ != IntegerType()) || (RHS.typ != IntegerType())) 
       Error(exp->line," Both arguments to > must be integers");
-    return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_GT));
+    return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_GT,INT));
     } 
     break;
-  case AST_GEQ:
+  case AST_GEQ: /* add functionality for chars (ascii values) */
     {
     expressionRec LHS = analyzeExpression(typeEnv,functionEnv,varEnv,exp->u.opExp.left);
     expressionRec RHS = analyzeExpression(typeEnv,functionEnv,varEnv,exp->u.opExp.right);
     if ((LHS.typ != IntegerType()) || (RHS.typ != IntegerType())) 
       Error(exp->line," Both arguments to >= must be integers");
-    return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_GEQ));
+    return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_GEQ,INT));
     } 
     break;
   case AST_AND:
@@ -826,7 +839,7 @@ expressionRec analyzeOpExpression(environment typeEnv, environment functionEnv, 
     expressionRec RHS = analyzeExpression(typeEnv,functionEnv,varEnv,exp->u.opExp.right);
     if ((LHS.typ != BooleanType()) || (RHS.typ != BooleanType()))
       Error(exp->line," Both arguments to || must be boolean");
-    return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_AND));
+    return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_AND,BOOL));
     }
     break;
   case AST_OR:
@@ -835,7 +848,7 @@ expressionRec analyzeOpExpression(environment typeEnv, environment functionEnv, 
     expressionRec RHS = analyzeExpression(typeEnv,functionEnv,varEnv,exp->u.opExp.right);
     if ((LHS.typ != BooleanType()) || (RHS.typ != BooleanType()))
       Error(exp->line," Both arguments to || must be boolean");
-    return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_OR));
+    return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_OR,BOOL));
     } 
     break;
   case AST_NOT:
@@ -844,7 +857,7 @@ expressionRec analyzeOpExpression(environment typeEnv, environment functionEnv, 
     expressionRec RHS = analyzeExpression(typeEnv,functionEnv,varEnv,exp->u.opExp.right);
     if ((LHS.typ != IntegerType()) || (RHS.typ != BooleanType())) 
       Error(exp->line," Argument to ! must be boolean");
-    return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_NOT));
+    return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_NOT,BOOL));
     } 
     break;
   default:
