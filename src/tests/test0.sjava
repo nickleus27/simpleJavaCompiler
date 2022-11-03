@@ -8,8 +8,22 @@ void foobar(int a, int b){
 void foo(){
     foobar(5, 10);
 }
+void foob(){
+    int a = 1;
+    int b = 2;
+    int c = a*b+1;
+    printInt(a*b+1);
+    if(a<a*b+1){
+        printInt(c);
+    }else{
+        printInt(b);
+    }
+}
 
 void main()
-{ foo(); }
+{ 
+    foob();
+    //foo(); 
+}
 
 

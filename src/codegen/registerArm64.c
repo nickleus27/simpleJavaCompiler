@@ -18,6 +18,7 @@ Register R_result64 = NULL;
 Register R_return = NULL;
 Register R_acc32 = NULL;
 Register R_acc64 = NULL;
+Register R_accSPbytes = NULL;
 Register R_accSP32 = NULL;
 Register R_accSP64 = NULL;
 Register R_zero = NULL;
@@ -136,6 +137,15 @@ Register AccSP32(void) {
     strcpy(R_accSP32,"x23");
   }
   return R_accSP32;
+}
+
+Register AccSPbytes(){
+  if (R_accSPbytes == NULL) {
+    R_accSPbytes = (Register) malloc(sizeof(*R_accSPbytes));
+    R_accSPbytes = (char *) malloc(sizeof(char)*4);
+    strcpy(R_accSPbytes,"x24");
+  }
+  return R_accSPbytes;
 }
 
 Register AccSP64(void) {

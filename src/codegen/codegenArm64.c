@@ -208,6 +208,7 @@ void generateOpExp64(AATexpression tree){
     case AAT_NOT:
 
       break;
+    default: emit("Bad 64bit Operator Expression");
   }
 }
 
@@ -245,7 +246,12 @@ void generateOpExp32(AATexpression tree){
       emit("add %s, %s, #%d", AccSP32(), AccSP32(), HALFWORD);
       break;
     case AAT_LT:
-      
+      emit("ldr %s, [%s, #%d]", Tmp0_32(), AccSP32(), WORD);
+      emit("ldr %s, [%s, #%d]", Tmp1_32(), AccSP32(), HALFWORD);
+      emit("cmp %s, %s", Tmp0_32(), Tmp1_32());
+      emit("cset %s, lt", Acc32());
+      emit("strb %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
+      emit("add %s, %s, #%d", AccSP32(), AccSP32(), HALFWORD);
       break;
     case AAT_GT:
 
@@ -271,6 +277,7 @@ void generateOpExp32(AATexpression tree){
     case AAT_NOT:
 
     break;
+    default: emit("Bad 64bit Operator Expression");
   }
 }
 void addActualsToStack(AATexpressionList actual){
@@ -305,10 +312,13 @@ void generateStatement(AATstatement tree) {
         generateMove(tree);
         break;
     case AAT_JUMP:
-
+        emit("b %s", tree->u.jump);
         break;
     case AAT_CONDITIONALJUMP:
-
+        generateExpression(tree->u.conditionalJump.test);
+        emit("ldrb %s, [%s, #%d]!", Acc32(), AccSP32(), HALFWORD);
+        emit("cmp %s, #1", Acc32());
+        emit("b.eq %s", tree->u.conditionalJump.jump);
         break;
     case AAT_FUNCDEF:
     {
@@ -431,102 +441,108 @@ void generateMemoryExpression(AATexpression tree) {
 }
 
 void emitSetupCode(void) {
-    emit(".globl _start");
-    emit(".align 4");
-    emit(".text");
-    emit("_start:");
-    emit("mov %s, #0", FP());
-    emit("add %s, %s, #-%d", SP(), SP(), EXPR_STACKSIZE);
-    emit("mov %s, %s", Tmp0_64(), SP());
-    emit("str %s, [%s]", Tmp0_64(), SP());
-    emit("add %s, %s, #%d", AccSP64(), Tmp0_64(), 4072);
-    emit("str %s, [%s, #%d]", FP(), AccSP64(), WORD);
-    emit("str %s, [%s, #%d]", ReturnAddr(), AccSP64(), 2*WORD);
-    emit("add %s, %s, %#-d", AccSP32(), AccSP64(), 2036);
-    emit("bl main1");
-    /* how to push args on the stack for main? */
-    emit("mov X0, #0");
-    emit("mov X16, #1");
-    emit("svc #0x80");
+  emit(".globl _start");
+  emit(".align 4");
+  emit(".text");
+  emit("_start:");
+  emit("mov %s, #0", FP());
+  emit("add %s, %s, #-%d", SP(), SP(), EXPR_STACKSIZE);
+  emit("mov %s, %s", Tmp0_64(), SP());
+  emit("str %s, [%s]", Tmp0_64(), SP());
+  emit("add %s, %s, #%d", AccSP64(), Tmp0_64(), 4072);
+  emit("str %s, [%s, #%d]", FP(), AccSP64(), WORD);
+  emit("str %s, [%s, #%d]", ReturnAddr(), AccSP64(), 2*WORD);
+  emit("add %s, %s, %#-d", AccSP32(), AccSP64(), 2036);
+  emit("bl main1");
+  /* how to push args on the stack for main? */
+  emit("mov X0, #0");
+  emit("mov X16, #1");
+  emit("svc #0x80");
 
-    /*print integer function*/
-    emit(
-"printInt:\n"
-        "mov x9, sp\n"
-        "str x9, [sp, #-32]!//push down the stack\n"
-        "str fp, [sp, #16]  //store fp\n"
-        "str lr, [sp, #24]  //store lr above fp\n"
-        "add fp, sp, #16    //store set fp for this frame\n"
-        "ldr w9, [fp, #32]  //get integer from arg stack space\n"
-        "str w9, [fp, #-4]  //store integer in local var space\n"
+  /*print integer function*/
+  emit("printInt:");
+  emit("\tmov x9, sp\n"
+    "\tstr x9, [sp, #-32]!//push down the stack\n"
+    "\tstr fp, [sp, #16]  //store fp\n"
+    "\tstr lr, [sp, #24]  //store lr above fp\n"
+    "\tadd fp, sp, #16    //store set fp for this frame\n"
+    "\tldr w9, [fp, #32]  //get integer from arg stack space\n"
+    "\tstr w9, [fp, #-4]  //store integer in local var space\n"
 
-        "/*check for negative value*/\n"
-        "mov w11, #1\n"
-        "lsl w11, w11, #31\n"
-        "and w11, w11, w9\n"
-"sign_test:\n"
-        "cmp w11, #0\n"
-        "b.eq sign_end\n"
-        "mov w11, #45\n"
-        "strb w11, [fp, #-5]\n"
-        "mov    x0, #1           // 1 = StdOut\n"
-        "add    x1, fp, #-5           // point to memory of byte to be written\n"
-        "mov    x2, #1           // length of our string\n"
-        "mov    X16, #4          // Unix write system call\n"
-        "svc    #0x80            // Call kernel to output the string\n"
-        "mov w11, #-1\n"
-        "mul w9, w9, w11\n"
-"sign_end:\n"
- "       /*set up registers for function */\n"
- "       mov w10, #1 //placeholder value\n"
+    "\t/*check for negative value*/\n"
+    "\tmov w11, #1\n"
+    "\tlsl w11, w11, #31\n"
+    "\tand w11, w11, w9\n"
+  );
 
-"placeholder_loop:\n"
-"        mov w11, #10\n"
-"        mul w10, w10, w11\n"
-"placeholder_test:\n"
-"        cmp w10, w9\n"
-"        b.le placeholder_loop\n"
-        
-"        mov x11, #10\n"
-"        /* need to add checking for division by 0 */\n"
-"        sdiv w10, w10, w11\n"
+  emit("sign_test:");
+  emit("\tcmp w11, #0\n"
+    "\tb.eq sign_end\n"
+    "\tmov w11, #45\n"
+    "\tstrb w11, [fp, #-5]\n"
+    "\tmov    x0, #1           // 1 = StdOut\n"
+    "\tadd    x1, fp, #-5           // point to memory of byte to be written\n"
+    "\tmov    x2, #1           // length of our string\n"
+    "\tmov    X16, #4          // Unix write system call\n"
+    "\tsvc    #0x80            // Call kernel to output the string\n"
+    "\tmov w11, #-1\n"
+    "\tmul w9, w9, w11\n"
+  );
+  emit("sign_end:");
+  emit("\t/*set up registers for function */\n"
+    "\tmov w10, #1 //placeholder value\n"
+  );
 
-"print_loop:\n"
-"        sdiv w11, w9, w10\n"
-"        add w11, w11, #48\n"
-"        strb w11, [fp, #-5]\n"
-"        mov    x0, #1           // 1 = StdOut\n"
-"        add    x1, fp, #-5           // point to memory of byte to be written\n"
-"        mov    x2, #1           // length of our string\n"
-"        mov    X16, #4          // Unix write system call\n"
-"        svc    #0x80            // Call kernel to output the string\n"
-"        sdiv w11, w9, w10\n"
-"        mul w11, w11, w10\n"
-"        sub w9, w9, w11\n"
-"        mov w11, #10\n"
-"        sdiv w10, w10, w11\n"
+  emit("placeholder_loop:");
+  emit("\tmov w11, #10\n"
+    "\tmul w10, w10, w11\n"
+  );
+  emit("placeholder_test:");
+  emit("\tcmp w10, w9\n"
+    "\tb.le placeholder_loop\n"
+            
+    "\tmov x11, #10\n"
+    "\t/* need to add checking for division by 0 */\n"
+    "\tsdiv w10, w10, w11\n"
+  );
 
-"print_test:\n"
-"        cmp w10, #0\n"
-"        b.ne print_loop\n"
+  emit("print_loop:");
+  emit("\tsdiv w11, w9, w10\n"
+    "\tadd w11, w11, #48\n"
+    "\tstrb w11, [fp, #-5]\n"
+    "\tmov    x0, #1           // 1 = StdOut\n"
+    "\tadd    x1, fp, #-5           // point to memory of byte to be written\n"
+    "\tmov    x2, #1           // length of our string\n"
+    "\tmov    X16, #4          // Unix write system call\n"
+    "\tsvc    #0x80            // Call kernel to output the string\n"
+    "\tsdiv w11, w9, w10\n"
+    "\tmul w11, w11, w10\n"
+    "\tsub w9, w9, w11\n"
+    "\tmov w11, #10\n"
+    "\tsdiv w10, w10, w11\n"
+  );
 
+  emit("print_test:");
+  emit("\tcmp w10, #0\n"
+    "\tb.ne print_loop\n"
 
-"        /* new line */\n"
-"        mov w11, #10\n"
-"        strb w11, [fp, #-5]\n"
-"        mov    x0, #1           // 1 = StdOut\n"
-"        add    x1, fp, #-5           // point to memory of byte to be written\n"
-"        mov    x2, #1           // length of our string\n"
-"        mov    X16, #4          // Unix write system call\n"
-"        svc    #0x80            // Call kernel to output the string\n"
+    "\t/* new line */\n"
+    "\tmov w11, #10\n"
+    "\tstrb w11, [fp, #-5]\n"
+    "\tmov    x0, #1           // 1 = StdOut\n"
+    "\tadd    x1, fp, #-5           // point to memory of byte to be written\n"
+    "\tmov    x2, #1           // length of our string\n"
+    "\tmov    X16, #4          // Unix write system call\n"
+    "\tsvc    #0x80            // Call kernel to output the string\n"
+  );
 
-"printIntEnd:\n"
-"        ldr lr, [fp, #8]  //restore registers\n"
-"        ldr fp, [fp]\n"
-"        ldr x9, [sp]\n"
-"        mov sp, x9\n"
-"        ret\n"
-);
+  emit("printIntEnd:");
+  emit("\tldr lr, [fp, #8]  //restore registers\n"
+    "\tldr fp, [fp]\n"
+    "\tldr x9, [sp]\n"
+    "\tmov sp, x9\n"
+    "\tret\n"
+  );
 
 /**
  * TODO: In Allocate(AATexpression size) in AATBuildTree.c

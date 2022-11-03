@@ -16,6 +16,7 @@ Register ReturnAddr(void);
 Register Zero(void);
 Register Acc32(void);
 Register Acc64(void);
+Register AccSPbytes(void);
 Register AccSP32(void);
 Register AccSP64(void);
 Register Tmp0_32(void);
