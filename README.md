@@ -21,6 +21,6 @@ To build debug: ```cd src/build && make debug```
 ```Warning!!!: this repo is not complete!!!```
 
 Next Steps:
-1. Finish conditional expression operations
+1. Add moves for boolean type (load/store bytes to/from memory)
 2. Free memory from the AST in semantic.c in post order
 3. heap allocation
