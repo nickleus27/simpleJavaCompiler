@@ -26,11 +26,24 @@ void printInc(int times){
         printInt(i);
     }
 }
+void testBool(){
+    int i = 0;
+    boolean t1 = true;
+    while( t1==true ){
+        printInt(i);
+        i++;
+        if( i == 25)
+            t1 = false;
+    }
+}
 void main()
 { 
-    foob();
-    foo();
-    printInc(20);
+    //foob();
+    //foo();
+    //printInc(20);
+    testBool();
+    boolean t = true;
+    int i = 5000;
 }
 
 
