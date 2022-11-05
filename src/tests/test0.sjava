@@ -38,9 +38,9 @@ void testBool(){
 }
 void main()
 { 
-    //foob();
-    //foo();
-    //printInc(20);
+    foob();
+    foo();
+    printInc(20);
     testBool();
     boolean t = true;
     int i = 5000;

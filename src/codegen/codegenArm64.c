@@ -254,12 +254,18 @@ void generateOpExp32(AATexpression tree){
       emit("str %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
       emit("add %s, %s, #%d", AccSP32(), AccSP32(), HALFWORD);
       break;
+
+    /**
+     * TODO: Do I need to change STRB TO STR in boolean expressions
+     * When pushing value on 32bit (4byte/AccSP32) stack??
+     * go through change and test!
+     */
     case AAT_LT:
       emit("ldr %s, [%s, #%d]", Tmp0_32(), AccSP32(), WORD);
       emit("ldr %s, [%s, #%d]", Tmp1_32(), AccSP32(), HALFWORD);
       emit("cmp %s, %s", Tmp0_32(), Tmp1_32());
       emit("cset %s, lt", Acc32());
-      emit("strb %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
+      emit("str %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
       emit("add %s, %s, #%d", AccSP32(), AccSP32(), HALFWORD);
       break;
     case AAT_GT:
@@ -267,7 +273,7 @@ void generateOpExp32(AATexpression tree){
       emit("ldr %s, [%s, #%d]", Tmp1_32(), AccSP32(), HALFWORD);
       emit("cmp %s, %s", Tmp0_32(), Tmp1_32());
       emit("cset %s, gt", Acc32());
-      emit("strb %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
+      emit("str %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
       emit("add %s, %s, #%d", AccSP32(), AccSP32(), HALFWORD);
       break;
     case AAT_LEQ:
@@ -275,7 +281,7 @@ void generateOpExp32(AATexpression tree){
       emit("ldr %s, [%s, #%d]", Tmp1_32(), AccSP32(), HALFWORD);
       emit("cmp %s, %s", Tmp0_32(), Tmp1_32());
       emit("cset %s, le", Acc32());
-      emit("strb %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
+      emit("str %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
       emit("add %s, %s, #%d", AccSP32(), AccSP32(), HALFWORD);
       break;
     case AAT_GEQ:
@@ -283,7 +289,7 @@ void generateOpExp32(AATexpression tree){
       emit("ldr %s, [%s, #%d]", Tmp1_32(), AccSP32(), HALFWORD);
       emit("cmp %s, %s", Tmp0_32(), Tmp1_32());
       emit("cset %s, ge", Acc32());
-      emit("strb %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
+      emit("str %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
       emit("add %s, %s, #%d", AccSP32(), AccSP32(), HALFWORD);
       break;
     case AAT_EQ:
@@ -291,7 +297,7 @@ void generateOpExp32(AATexpression tree){
       emit("ldr %s, [%s, #%d]", Tmp1_32(), AccSP32(), HALFWORD);
       emit("cmp %s, %s", Tmp0_32(), Tmp1_32());
       emit("cset %s, eq", Acc32());
-      emit("strb %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
+      emit("str %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
       emit("add %s, %s, #%d", AccSP32(), AccSP32(), HALFWORD);
       break;
     case AAT_NEQ:
@@ -299,21 +305,21 @@ void generateOpExp32(AATexpression tree){
       emit("ldr %s, [%s, #%d]", Tmp1_32(), AccSP32(), HALFWORD);
       emit("cmp %s, %s", Tmp0_32(), Tmp1_32());
       emit("cset %s, ne", Acc32());
-      emit("strb %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
+      emit("str %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
       emit("add %s, %s, #%d", AccSP32(), AccSP32(), HALFWORD);
       break;
     case AAT_AND:
       emit("ldrb %s, [%s, #%d]", Tmp0_32(), AccSP32(), WORD);
       emit("ldrb %s, [%s, #%d]", Tmp1_32(), AccSP32(), HALFWORD);
       emit("and %s, %s, %s", Acc32(), Tmp0_32(), Tmp1_32());
-      emit("strb %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
+      emit("str %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
       emit("add %s, %s, #%d", AccSP32(), AccSP32(), HALFWORD);
       break;
     case AAT_OR:
       emit("ldrb %s, [%s, #%d]", Tmp0_32(), AccSP32(), WORD);
       emit("ldrb %s, [%s, #%d]", Tmp1_32(), AccSP32(), HALFWORD);
       emit("orr %s, %s, %s", Acc32(), Tmp0_32(), Tmp1_32());
-      emit("strb %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
+      emit("str %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
       emit("add %s, %s, #%d", AccSP32(), AccSP32(), HALFWORD);
       break;
     case AAT_NOT:
