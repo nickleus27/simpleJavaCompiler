@@ -323,7 +323,12 @@ void generateOpExp32(AATexpression tree){
       emit("add %s, %s, #%d", AccSP32(), AccSP32(), HALFWORD);
       break;
     case AAT_NOT:
-
+      emit("ldrb %s, [%s, #%d]", Tmp0_32(), AccSP32(), WORD); // Tmp0 == #2
+      emit("ldrb %s, [%s, #%d]", Tmp1_32(), AccSP32(), HALFWORD); // Tmp1 == boolean value
+      emit("mvn %s, %s", Tmp1_32(), Tmp1_32()); // move NOT boolean value
+      emit("add %s, %s, %s", Acc32(), Tmp0_32(), Tmp1_32()); // add #2 to inverted value to get 0 | 1
+      emit("str %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
+      emit("add %s, %s, #%d", AccSP32(), AccSP32(), HALFWORD);
     break;
     default: emit("Bad 64bit Operator Expression");
   }
