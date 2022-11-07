@@ -11,6 +11,7 @@
 #include "../codegen/registerArm64.h"
 #include "AAT.h"
 #include "../codegen/MachineDependent.h"
+#include "AATBuildTree.h"
 #include <stdlib.h>
 
 
@@ -21,7 +22,7 @@ AATexpression Allocate(AATexpression size) {
    * 
    */
   AATexpressionList actuals = AATExpressionList(size, NULL, REG64, 0);
-  return AATFunctionCall("allocate",actuals, PTR);
+  return AATFunctionCall("allocate",actuals, PTR, 0);
 
 }
 
@@ -60,8 +61,8 @@ AATexpression ConstantExpression(int value, int size_type){
  return _AATConstant(value, size_type);
 }
 
-AATexpression CallExpression(AATexpressionList actuals, Label name, int size_type){
-  return AATFunctionCall( name, actuals, size_type);
+AATexpression CallExpression(AATexpressionList actuals, Label name, int size_type, int argMemSize){
+  return AATFunctionCall( name, actuals, size_type, argMemSize);
 }
 
 AATstatement CallStatement(AATexpressionList actuals, Label name, int argMemSize){
@@ -86,8 +87,10 @@ AATstatement ReturnStatement(AATexpression value, Label functionend, int size_ty
     return AATSequential(AATMove(AATRegister(Result64(), PTR), value, PTR), AATJump(functionend));
   }else if(size_type==INT){
     return AATSequential(AATMove(AATRegister(Result32(), INT), value, INT), AATJump(functionend));
-  }else{
+  }else if(size_type==BYTE){
     return AATSequential(AATMove(AATRegister(Result32(), BOOL), value, BOOL), AATJump(functionend));
+  }else{ // void return type
+    AATJump(functionend);
   }
 }
 

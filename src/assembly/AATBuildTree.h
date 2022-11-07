@@ -27,7 +27,7 @@ AATstatement EmptyStatement(void);
 AATstatement CallStatement(AATexpressionList actuals, Label name, int argMemSize);
 AATstatement AssignmentStatement(AATexpression lhs, AATexpression rhs, int size);
 AATstatement SequentialStatement(AATstatement first, AATstatement second);
-AATstatement ReturnStatement(AATexpression value, Label functionend);
+AATstatement ReturnStatement(AATexpression value, Label functionend, int size_type);
 
 /*expressions*/
 AATexpression Allocate(AATexpression size);
@@ -36,6 +36,6 @@ AATexpression ArrayVariable(AATexpression base, AATexpression index, int element
 AATexpression ClassVariable(AATexpression base, int offset, int size_type);
 AATexpression ConstantExpression(int value, int size_type);
 AATexpression OperatorExpression(AATexpression left, AATexpression right, AAToperator operator, int size_type);
-AATexpression CallExpression(AATexpressionList actuals, Label name, int size_type);
+AATexpression CallExpression(AATexpressionList actuals, Label name, int size_type, int argMemSize);
 
 AATexpressionList ActualList(AATexpression first, AATexpressionList rest, int size_type, int offset);

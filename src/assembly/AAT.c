@@ -151,12 +151,13 @@ AATexpression AATOperator(AATexpression left, AATexpression right, AAToperator o
   retval->u.operator.op = op;
   return retval;
 }
-AATexpression AATFunctionCall(Label jump, AATexpressionList actuals, int size_type) {
+AATexpression AATFunctionCall(Label jump, AATexpressionList actuals, int size_type, int argMemSize) {
   AATexpression retval = (AATexpression) malloc(sizeof(struct AATexpression_));
   retval->kind = AAT_FUNCTIONCALL;
   retval->size_type = size_type;
   retval->u.functionCall.jump = jump;
   retval->u.functionCall.actuals = actuals;
+  retval->u.functionCall.argMemSize = argMemSize;
   return retval;
 }
 AATexpression _AATConstant(int constant, int size_type){

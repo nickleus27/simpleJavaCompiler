@@ -34,6 +34,8 @@ void generateRegisterExp(AATexpression tree);
 void generateOpExp(AATexpression tree);
 void generateFunCall(AATexpression tree);
 
+void addActualsToStack(AATexpressionList actual);
+
 void emit(char *assem,...);
 void emitLibrary(void);
 void emitSetupCode(void);
@@ -147,10 +149,56 @@ void generateOpExp(AATexpression tree){
 void generateFunCall(AATexpression tree){
     switch(tree->size_type/4){// devide by 4 to minimize space 1/4==0, 4/4==1, 8/4==2
     case SWITCH_BYTE:
+          /**
+       * TODO: check if argMemSize is 0 before adjusting stack size
+       * 
+       */
+      if (tree->u.functionCall.argMemSize){
+        emit("mov %s, %s", Acc64(), SP());
+        emit("str %s, [%s, #-%d]!", Acc64(), SP(), tree->u.functionCall.argMemSize);
+        addActualsToStack(tree->u.functionCall.actuals);
+        emit("bl %s", tree->u.functionCall.jump);
+        emit("str %s, [%s]", Result32(), AccSP32());
+        emit("add %s, %s, #%d", AccSP32(), AccSP32(), 0-HALFWORD);
+        emit("str %s, [%s]", Acc64(), SP());
+        emit("mov %s, %s", SP(), Acc64());
+      } else {
+        emit("bl %s", tree->u.functionCall.jump);
+        emit("str %s, [%s]", Result32(), AccSP32());
+        emit("add %s, %s, #%d", AccSP32(), AccSP32(), 0-HALFWORD);
+      }
     break;
     case SWITCH_REG32:
+      if (tree->u.functionCall.argMemSize){
+        emit("mov %s, %s", Acc64(), SP());
+        emit("str %s, [%s, #-%d]!", Acc64(), SP(), tree->u.functionCall.argMemSize);
+        addActualsToStack(tree->u.functionCall.actuals);
+        emit("bl %s", tree->u.functionCall.jump);
+        emit("str %s, [%s]", Result32(), AccSP32());
+        emit("add %s, %s, #%d", AccSP32(), AccSP32(), 0-HALFWORD);
+        emit("str %s, [%s]", Acc64(), SP());
+        emit("mov %s, %s", SP(), Acc64());
+      } else {
+        emit("bl %s", tree->u.functionCall.jump);
+        emit("str %s, [%s]", Result32(), AccSP32());
+        emit("add %s, %s, #%d", AccSP32(), AccSP32(), 0-HALFWORD);
+      }
     break;
     case SWITCH_REG64:
+    if (tree->u.functionCall.argMemSize){
+        emit("mov %s, %s", Acc64(), SP());
+        emit("str %s, [%s, #-%d]!", Acc64(), SP(), tree->u.functionCall.argMemSize);
+        addActualsToStack(tree->u.functionCall.actuals);
+        emit("bl %s", tree->u.functionCall.jump);
+        emit("str %s, [%s]", Result64(), AccSP64());
+        emit("add %s, %s, #%d", AccSP64(), AccSP64(), 0-WORD);
+        emit("str %s, [%s]", Acc64(), SP());
+        emit("mov %s, %s", SP(), Acc64());
+    } else {
+        emit("bl %s", tree->u.functionCall.jump);
+        emit("str %s, [%s]", Result64(), AccSP64());
+        emit("add %s, %s, #%d", AccSP64(), AccSP64(), 0-WORD);
+    }
     break;
     default:
     break;
@@ -340,9 +388,9 @@ void addActualsToStack(AATexpressionList actual){
   switch(actual->size_type/4){// devide by 4 to minimize space 1/4==0, 4/4==1, 8/4==2
     case(SWITCH_BYTE):
     {
-      /**
-       * TODO: ADD CODE
-       */
+      generateExpression(actual->first);
+      emit("ldrb %s, [%s, #%d]!", Acc32(), AccSP32(), HALFWORD);
+      emit("str %s, [%s, #%d]", Acc32(), SP(), actual->offset);
     }break;
     case(SWITCH_REG32):
     {
@@ -403,14 +451,16 @@ void generateStatement(AATstatement tree) {
        * bl startLabel
        * move sp back up the size of argMemSize
        */
-
-      emit("mov %s, %s", Acc64(), SP());
-      emit("str %s, [%s, #-%d]!", Acc64(), SP(), tree->u.procedureCall.argMemSize);
-      addActualsToStack(tree->u.procedureCall.actuals);
-      emit("bl %s", tree->u.procedureCall.jump);
-      //emit("add %s, %s, #%d", SP(), SP(), tree->u.procedureCall.argMemSize);
-      emit("str %s, [%s]", Acc64(), SP());
-      emit("mov %s, %s", SP(), Acc64());
+      if (tree->u.procedureCall.argMemSize){ // check if need to add args to stack
+        emit("mov %s, %s", Acc64(), SP());
+        emit("str %s, [%s, #-%d]!", Acc64(), SP(), tree->u.procedureCall.argMemSize);
+        addActualsToStack(tree->u.procedureCall.actuals);
+        emit("bl %s", tree->u.procedureCall.jump);
+        emit("str %s, [%s]", Acc64(), SP());
+        emit("mov %s, %s", SP(), Acc64());
+      } else {
+        emit("bl %s", tree->u.procedureCall.jump);
+      }
       break;
     case AAT_SEQ:
       generateStatement(tree->u.sequential.left);

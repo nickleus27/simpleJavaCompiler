@@ -74,6 +74,7 @@ struct AATexpression_ {
     struct {
       Label jump;
       AATexpressionList actuals;
+      int argMemSize;
     } functionCall;
   } u;
 };
@@ -97,7 +98,7 @@ AATexpression _AATConstant(int constant, int size_type);
 AATexpression AATRegister(Register reg, int size_type);
 AATexpression AATMemory(AATexpression mem, int size_type);
 AATexpression AATOperator(AATexpression left, AATexpression right, AAToperator op, int size_type);
-AATexpression AATFunctionCall(Label jump, AATexpressionList actuals, int size_type);
+AATexpression AATFunctionCall(Label jump, AATexpressionList actuals, int size_type, int argMemSize);
 
 /* statement stack functions */
 void AATpush(AATstatement stm);

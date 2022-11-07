@@ -344,61 +344,71 @@ AATstatement analyzeFunction(environment typeEnv, environment functionEnv, envir
     break;
   }
 }
-/* how to reduce function arguments?!!!!!! <------------------------- */
-/* todo: this function produces too many errors. How to isolate error output
-* to only one error? <----------------------------------------------- */
-AATexpressionList _analyzeCallExp(environment typeEnv, environment functionEnv, environment varEnv, ASTexpression exp, ASTexpressionList expList, typeList formalList){
-  AATexpressionList actuals;
-  expressionRec expRec;
-  if (!expList && formalList || expList && !formalList){
-    Error(exp->line, " arguments differ from function definition");
-  }
-  if ( !expList && !formalList ) return NULL;
-  if( expList && formalList )
-    actuals = _analyzeCallExp(typeEnv, functionEnv, varEnv, exp, expList->rest, formalList->rest);
-  else if ( !expList && formalList)
-    actuals = _analyzeCallExp(typeEnv, functionEnv, varEnv, exp, NULL, formalList->rest);
-  else if ( expList && !formalList )
-    actuals = _analyzeCallExp(typeEnv, functionEnv, varEnv, exp, expList->rest, NULL);
-  else 
-    actuals = _analyzeCallExp(typeEnv, functionEnv, varEnv, exp, NULL, NULL);
-  if(expList && formalList){
-    expRec = analyzeExpression(typeEnv, functionEnv, varEnv, expList->first);
-    if (  expRec.typ != formalList->first)
-      Error( exp->line, " %s expression does not match function definition", exp->u.callExp.name);
-      return ActualList(ConstantExpression(0, 0), actuals, formalList->first->size_type, *formalList->offset);
-  }else if ( !expList && formalList){
-    Error( exp->line, " formals do not match function prototype" );
-    return ActualList(ConstantExpression(0, 0), actuals, formalList->first->size_type, *formalList->offset);
-  }else if ( expList && !formalList){
-    Error( exp->line, " formals do not match function prototype" );
-    return ActualList(ConstantExpression(0, 0), actuals, 0, 0);
-  }
-  return ActualList(expRec.tree, actuals, formalList->first->size_type, *formalList->offset);
-}
 
-/* todo: consider switching this function from recursive to iterative like analyzeCallStm */
 expressionRec analyzeCallExp(environment typeEnv, environment functionEnv, environment varEnv, ASTexpression exp){
-  /*use post order recursive decent to test each ExpList exp to typeList type*/
+  typeList formalList;
+  ASTexpressionList actualList;
+  AATexpressionList first = NULL, current = NULL;
+  expressionRec expRec;
+  bool noArgs = true;
   envEntry function = find( functionEnv, exp->u.callExp.name);
   if(!function){
     Error(exp->line," %s function not defined", exp->u.callExp.name);
-    return ExpressionRec(NULL, ConstantExpression(0, 0));
+    return ExpressionRec(NULL, ConstantExpression(0, 0));;
   }
-  AATexpressionList actuals = _analyzeCallExp( typeEnv, functionEnv, varEnv, exp, exp->u.callExp.actuals,
-    function->u.functionEntry.formals );
   if (! function->u.functionEntry.returntyp ){
     Error(exp->line," return type is not a defined type");
     return ExpressionRec(NULL, ConstantExpression(0, 0));
   }
   if( function->u.functionEntry.returntyp == VoidType()){
     Error(exp->line," %s void type can not be used as an expression", exp->u.callExp.name);
-    /**
-     * TODO: Should I return an ExpressionRec here for Void Type?
-     */
   }
-  return ExpressionRec( function->u.functionEntry.returntyp, CallExpression(actuals , function->u.functionEntry.startLabel,
-    function->u.functionEntry.returntyp->size_type));
+  formalList = function->u.functionEntry.formals;
+  actualList = exp->u.callExp.actuals;
+  while( formalList && actualList ){
+    expRec =  analyzeExpression(typeEnv, functionEnv, varEnv, actualList->first);
+    if (formalList->first != expRec.typ){
+      if( noArgs ){
+        noArgs = false;
+        first = current = ActualList(expRec.tree, NULL, formalList->first->size_type, *formalList->offset);
+      }else{
+        current->rest = ActualList(expRec.tree, NULL, formalList->first->size_type, *formalList->offset);
+        current = current->rest;
+      }
+      switch (formalList->first->kind){
+        case integer_type:
+          Error(actualList->line, " Acutal type does not match formal int type");
+          break;
+        case boolean_type: 
+          Error(actualList->line, " Acutal type does not match formal boolean type");
+          break;
+        case void_type:
+          Error(actualList->line, " Acutal type does not match formal void type");
+	      case class_type:
+          Error(actualList->line, " Acutal type does not match formal class type");
+          break;
+        case  array_type:
+          Error(actualList->line, " Acutal type does not match formal array type");
+          break;
+        default:
+          Error(actualList->line, " Bad statement");
+      }
+    }else{
+      if( noArgs ){
+        noArgs = false;
+        first = current = ActualList(expRec.tree, NULL, formalList->first->size_type, *formalList->offset);
+      }else{
+        current->rest = ActualList(expRec.tree, NULL, formalList->first->size_type, *formalList->offset);
+        current = current->rest;
+      }
+    }
+    formalList = formalList->rest;
+    actualList = actualList->rest;
+  }
+  if( formalList != NULL || actualList != NULL)
+    Error(exp->line, " Number of actuals differs from formals");
+  return ExpressionRec(function->u.functionEntry.returntyp, CallExpression(first, function->u.functionEntry.startLabel,
+    function->u.functionEntry.returntyp->size_type, function->u.functionEntry.argMemSize));
 }
 
 AATexpressionList analyzeCallStm(environment typeEnv, environment functionEnv, environment varEnv, ASTstatement statement){
@@ -600,7 +610,7 @@ AATstatement analyzeStatement(environment typeEnv, environment functionEnv, envi
             || expType.typ != IntegerType() )
               RETURN_FLAG = NON_VOID_TYPE;
       }
-      return ReturnStatement( expType.tree, GLOBfunctPtr->u.functionEntry.endLabel);
+      return ReturnStatement( expType.tree, GLOBfunctPtr->u.functionEntry.endLabel, GLOBfunctPtr->u.functionEntry.returntyp->size_type);
     }
     break; 
   case EmptyStm:

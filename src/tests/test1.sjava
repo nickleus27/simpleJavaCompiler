@@ -1,0 +1,19 @@
+boolean testB(int num){
+    if(num<20){
+        return true;
+    }else{
+        return false;
+    }
+}
+
+int testI(int num){
+    return num+1;
+}
+
+void main(){
+    int num = 0;
+    while(testB(num)){
+        printInt(num);
+        num = testI(num);
+    }
+}
