@@ -1,0 +1,10 @@
+/*int[] newArray() {
+    int arr[] = new int[5];
+    return arr;
+}*/
+
+void main(){
+    int arr[] = new int[5];
+    arr[0] = 18;
+    int i = arr[0];
+}

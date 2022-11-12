@@ -1,3 +1,6 @@
+boolean testB(int num);
+int testI(int num);
+
 boolean testB(int num){
     if(num<20){
         return true;

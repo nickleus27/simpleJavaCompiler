@@ -188,11 +188,7 @@ void nextArgElem(stack_env env, stack element, int offset_8, int offset_4, int o
 *   offset will be offset + SP*/
 int pushArgsOnStack(stack_env env, env_sizes mem_sizes){
     int totalArgSize = mem_sizes->size_1 + mem_sizes->size_4 + mem_sizes->size_8;
-    int i = 0;
-    while(totalArgSize%16){
-        totalArgSize++;
-        i++;
-    }
+    while(totalArgSize%16) totalArgSize++;
     int offset_8 = 0,
     offset_4 = mem_sizes->size_8,
     offset_1 = offset_4 + mem_sizes->size_4;

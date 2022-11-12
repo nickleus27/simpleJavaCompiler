@@ -68,7 +68,7 @@ Register Result32(void) {
 Register Result64(void) {
   if (R_result64 == NULL) {
     R_result64 = (char *) malloc(sizeof(char)*3);
-    strcpy(R_result32,"x0");
+    strcpy(R_result64,"x0");
   } 
   return R_result64;
 }

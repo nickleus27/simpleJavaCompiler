@@ -299,6 +299,11 @@ AATstatement analyzeFunction(environment typeEnv, environment functionEnv, envir
       if(retType)
         enter( functionEnv, function->u.prototype.name, FunctionEntry(retType->u.typeEntry.typ, formalList,
           NewNamedLabel(function->u.prototype.name), NewLabel()));
+      /**
+       * TODO: This
+       * 
+       */
+      return EmptyStatement();
     }
     break;
     case FunctionDef:
@@ -342,6 +347,8 @@ AATstatement analyzeFunction(environment typeEnv, environment functionEnv, envir
       return functionDefinition(AATpop(), generateStackMemory(functionStack), GLOBfunctPtr->u.functionEntry.startLabel, GLOBfunctPtr->u.functionEntry.endLabel);
     }
     break;
+    Error(function->line, " Error analyzing function.");
+    return functionDefinition(EmptyStatement(), 0, "error", "error");
   }
 }
 
@@ -657,9 +664,13 @@ expressionRec analyzeNewArray(environment typeEnv, environment functionEnv, envi
     Error(exp->line, " Array size must be an integer");
   expType = find(typeEnv, key);
   if( !expType ) return ExpressionRec(NULL, ConstantExpression(0, 0));
+  /**
+   * TODO: need to have the multiply use 64 bit reg because the value will be used to access memory location
+   * 
+   */
   return ExpressionRec(expType->u.typeEntry.typ, Allocate(OperatorExpression(
-    expRec.tree, ConstantExpression(expType->u.typeEntry.typ->u.array->size_type, expType->u.typeEntry.typ->u.array->size_type),
-    AAT_MULTIPLY, expType->u.typeEntry.typ->u.array->size_type)));
+    expRec.tree, ConstantExpression(expType->u.typeEntry.typ->u.array->size_type, INT),
+    AAT_MULTIPLY, INT)));
 }
 
 expressionRec analyzeExpression(environment typeEnv, environment functionEnv, environment varEnv, ASTexpression exp) {
@@ -719,6 +730,12 @@ expressionRec analyzeVar(environment typeEnv, environment functionEnv, environme
         /* return ExpressionRec(IntegerType(),NULL); */
         return ExpressionRec(NULL, ConstantExpression(0, 0));
       }
+      /**
+       * TODO: Need to fix array memory access to correctly function in assembly
+       * probably need to get the right register type WN or XN for offset
+       * acces is in integer(reg32) arr[int] but memory access is in reg64
+       * 
+       */
       return ExpressionRec(baseType.typ->u.array, ArrayVariable(baseType.tree, indexExp, baseType.typ->size_type, baseType.typ->size_type)); 
     break;
     case ClassVar:

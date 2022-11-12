@@ -21,9 +21,10 @@ AATexpression Allocate(AATexpression size) {
    * TODO: Need to get offset right in AATExpressionList call below
    * 
    */
-  AATexpressionList actuals = AATExpressionList(size, NULL, REG64, 0);
-  return AATFunctionCall("allocate",actuals, PTR, 0);
-
+  /* size has to be divisible by 16 for arm64 */
+  //while (size % 16) size++;
+  AATexpressionList actuals = AATExpressionList(size, NULL, REG32, 32);
+  return AATFunctionCall("allocate",actuals, PTR, 16);
 }
 
 AATexpression ClassVariable(AATexpression base, int offset, int size_type){
@@ -31,7 +32,7 @@ AATexpression ClassVariable(AATexpression base, int offset, int size_type){
    * TODO: Need to come back and check that the size_types are correct for registers and memory
    * compatibility. Double check in analyzeVar in semantic.c too.
    */
-  if ( offset ){
+  if ( offset ) {
     return AATMemory( AATOperator(base, _AATConstant(offset, REG64), AAT_MINUS, REG64), size_type);
   }
   else
@@ -90,7 +91,7 @@ AATstatement ReturnStatement(AATexpression value, Label functionend, int size_ty
   }else if(size_type==BYTE){
     return AATSequential(AATMove(AATRegister(Result32(), BOOL), value, BOOL), AATJump(functionend));
   }else{ // void return type
-    AATJump(functionend);
+    return AATJump(functionend);
   }
 }
 

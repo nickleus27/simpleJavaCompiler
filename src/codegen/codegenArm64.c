@@ -38,6 +38,8 @@ void addActualsToStack(AATexpressionList actual);
 
 void emit(char *assem,...);
 void emitLibrary(void);
+void emitPrintInt(void);
+void emitAllocate(void);
 void emitSetupCode(void);
 
 
@@ -45,8 +47,8 @@ void generateCode(AATstatement tree, FILE *output) {
   outfile = output; 
   emitSetupCode();
   generateStatement(tree);
+  emitLibrary();
   fprintf(output,"\n");
-  //emitLibrary();
 }
 
 void emit(char *assem,...) {
@@ -547,6 +549,8 @@ void generateMemoryExpression(AATexpression tree) {
 void emitSetupCode(void) {
   emit(".globl _start");
   emit(".align 4");
+  emit(".bss");
+  emit(".dword 0");
   emit(".text");
   emit("_start:");
   emit("mov %s, #0", FP());
@@ -562,7 +566,17 @@ void emitSetupCode(void) {
   emit("mov X0, #0");
   emit("mov X16, #1");
   emit("svc #0x80");
+}
 
+void emitLibrary(void) {
+  emitPrintInt();
+  emitAllocate();
+  emit(".bss");
+  emit(".align 4");
+  emit("heap_ptr:	.dword	0");
+}
+
+void emitPrintInt(void) {
   /*print integer function*/
   emit("printInt:");
   emit("\tmov x9, sp\n"
@@ -647,63 +661,55 @@ void emitSetupCode(void) {
     "\tmov sp, x9\n"
     "\tret\n"
   );
-
-/**
- * TODO: In Allocate(AATexpression size) in AATBuildTree.c
- * need to enter correct argument offset for ExpressionList call
- * so that the size arg can be accessed correctly in allocation function below
- */
-
-/*
-  emit(".globl main");
-  emit("main:");
-  emit("addi %s,%s,0", AccSP(), SP());
-  emit("addi %s, %s, %d", SP(), SP(), - WORDSIZE * STACKSIZE);
-  emit("addi %s, %s, 0", Tmp1(), SP());
-  emit("addi %s, %s, %d", Tmp1(), Tmp1(), - WORDSIZE * STACKSIZE);
-  emit("la %s, HEAPPTR", Tmp2());
-  emit("sw %s, 0(%s)", Tmp1(), Tmp2());
-  emit("sw %s, %d(%s)", ReturnAddr() , WORDSIZE, SP());
-  emit("jal main1");
-  emit("lw %s,%d(%s)", ReturnAddr(), WORDSIZE, SP());
-  emit("jr %s", ReturnAddr());
 }
 
-void emitLibrary() {
-  emit("Print:");
-  emit("lw $a0, 4(%s)",SP());
-  emit("li $v0, 1");
-  emit("syscall");
-  emit("li $v0,4");
-  emit("la $a0, sp");
-  emit("syscall");
-  emit("jr $ra");
-
-  emit("Println:");
-  emit("li $v0,4");
-  emit("la $a0, cr");
-  emit("syscall");
-  emit("jr $ra");
-
-  emit("Read:");
-  emit("li $v0,5");
-  emit("syscall");
-  emit("jr $ra");
-
+void emitAllocate(void) {
   emit("allocate:");
-  emit("la %s, HEAPPTR", Tmp1()); 
-  emit("lw %s, 0(%s)", Result(), Tmp1());
-  emit("lw %s, %d(%s)", Tmp2(), WORDSIZE, SP());
-  emit("sub %s, %s, %s", Tmp2(), Result(), Tmp2());
-  emit("sw %s, 0(%s)", Tmp2(), Tmp1());
-  emit("jr $ra");
-  
-  emit(".data");
-  emit("cr:");
-  emit(".asciiz \"\\n\"");
-  emit("sp:");
-  emit(".asciiz \" \"");
-  emit("HEAPPTR:");
-  emit(".word 0");
-  */
+  emit("\t/*function start */\n"
+    "\tmov x9, sp\n"
+    "\tstr x9, [sp, #-32]!//push down the stack\n"
+    "\tstr fp, [sp, #16]  //store fp\n"
+    "\tstr lr, [sp, #24]  //store lr above fp\n"
+    "\tadd fp, sp, #16    //store set fp for this frame\n"
+
+    "\tldr w12, [FP, #32]  // get size arg from params 32 bit size\n"
+    "\tsxtw x12, w12\n    //transfer 32bit to 64bit for memory access"
+    "\tmov x14, #16 //used in heap_size_test loop\n"
+    "\tb heap_size_test\n"
+  );
+  emit("heap_size_start:");
+  emit("add x12, x12, #1");
+  emit("heap_size_test:");
+  emit("\tsdiv x13, x12, x14\n"
+    "\tmul x13, x13, x14\n"
+    "\tsub x13, x12, x13\n"
+    "\tcmp x13, #0\n"
+    "\tb.ne heap_size_start\n"
+
+    "\tADRP x10, heap_ptr@PAGE   //get address of heap ptr\n"
+    "\tADD	x10, x10, heap_ptr@PAGEOFF\n" 
+    "\tldr x11, [x10]      // deref address\n"
+    "\tcmp x11, #0         // check if heap ptr has been init (if heap ptr == 0)\n"
+    "\tb.ne alloc_init_skip// skip initialize heap ptr\n"
+    "\tadd x11, x10, #16   // offset address by 16 so heap_ptr is not overwritten\n"
+  );
+  emit("alloc_init_skip:");
+  emit("\t/* here is where allocate memory */\n"
+    "\tadd x11, x11, x12   // add size offset to heap_ptr\n"
+    "\tstr x11, [x10]      // update heap_ptr\n"
+    "\t/*function end*/\n"
+    "\tmov x0, x11         // return ptr to allocated mem\n"
+    "\tldr lr, [fp, #8]    // restore registers\n"
+    "\tldr fp, [fp]\n"
+    "\tldr x9, [sp]\n"
+    "\tmov sp, x9\n"
+    "\tret\n"
+  );
+
+  /**
+   * TODO: In Allocate(AATexpression size) in AATBuildTree.c
+   * need to enter correct argument offset for ExpressionList call
+   * so that the size arg can be accessed correctly in allocation function below
+   */
+
 }
