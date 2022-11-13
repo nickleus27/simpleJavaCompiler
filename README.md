@@ -21,9 +21,8 @@ To build debug: ```cd src/build && make debug```
 ```Warning!!!: this repo is not complete!!!```
 
 Next Steps:
-1. Fix array memory access
-2. Add ```delete``` keyword, and implementation
-3. Finish memory configuration for classes in env_Arm64.c, semantic.c
-4. Free memory from the AST in semantic.c in post order
+1. Add ```delete``` keyword, and implementation
+2. Finish memory configuration for classes in env_Arm64.c, semantic.c
+3. Free memory from the AST in semantic.c in post order
     -> Memory clean up accross program
-5. Add ```char``` type, ```char[]```, and ```strings```
+4. Add ```char``` type, ```char[]```, and ```strings```

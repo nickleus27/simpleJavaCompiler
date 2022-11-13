@@ -8,4 +8,10 @@ void main(){
     arr[0] = 18;
     int i = arr[0];
     printInt(i);
+    for(int i = 0; i<5; i++) {
+        arr[i] = i;
+    }
+    for(int i = 0; i<5; i++) {
+        printInt(arr[i]);
+    }
 }

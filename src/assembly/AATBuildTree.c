@@ -17,14 +17,8 @@
 
 /*------------------> Expressions <------------------*/
 AATexpression Allocate(AATexpression size) {
-  /**
-   * TODO: Need to get offset right in AATExpressionList call below
-   * 
-   */
-  /* size has to be divisible by 16 for arm64 */
-  //while (size % 16) size++;
-  AATexpressionList actuals = AATExpressionList(size, NULL, REG32, 32);
-  return AATFunctionCall("allocate",actuals, PTR, 16);
+  AATexpressionList actuals = AATExpressionList(size, NULL, REG32, 16);
+  return AATFunctionCall("allocate",actuals, PTR, 32);
 }
 
 AATexpression ClassVariable(AATexpression base, int offset, int size_type){
@@ -40,14 +34,10 @@ AATexpression ClassVariable(AATexpression base, int offset, int size_type){
 }
 
 AATexpression ArrayVariable(AATexpression base, AATexpression index, int elementSize, int size_type){
-  /**
-   * TODO: Need to come back and check that the size_types are correct for registers and memory
-   * compatibility. Double check in analyzeVar in semantic.c too.
-   */
   return 
     AATMemory( 
       AATOperator(base, 
-        AATOperator(_AATConstant(elementSize, REG64),index, AAT_MULTIPLY, REG64), 
+        AATOperator(_AATConstant(elementSize, REG64), index, AAT_MULTIPLY, REG64),
       AAT_PLUS, REG64), 
     size_type
   );

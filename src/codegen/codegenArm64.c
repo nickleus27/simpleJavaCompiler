@@ -208,37 +208,29 @@ void generateFunCall(AATexpression tree){
 }
 
 void generateOpExp64(AATexpression tree){
+  if ( tree->u.operator.left->size_type == REG32 || tree->u.operator.right->size_type == REG32) { //if size types dont match
+    emit("ldr %s, [%s, #%d]", Acc32(), AccSP32(), HALFWORD);
+    emit("sxtw %s, %s", Acc64(), Acc32());
+    emit("ldr %s, [%s, #%d]", Tmp0_64(), AccSP64(), WORD);
+  } else {
+    emit("ldr %s, [%s, #%d]", Acc64(), AccSP64(), WORD * 2);
+    emit("ldr %s, [%s, #%d]", Tmp0_64(), AccSP64(), WORD);
+  }
   switch (tree->u.operator.op){
     case AAT_PLUS:
-      emit("ldr %s, [%s, #%d]", Acc64(), AccSP64(), WORD * 2);
-      emit("ldr %s, [%s, #%d]", Tmp0_64(), AccSP64(), WORD);
       emit("add %s, %s, %s", Acc64(), Acc64(), Tmp0_64());
-      emit("str %s, [%s, #%d]", Acc64(), AccSP64(), WORD * 2);
-      emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD);
       break;
     case AAT_MINUS:
-      emit("ldr %s, [%s, #%d]", Acc64(), AccSP64(), WORD * 2);
-      emit("ldr %s, [%s, #%d]", Tmp0_64(), AccSP64(), WORD);
       emit("sub %s, %s, %s", Acc64(), Acc64(), Tmp0_64());
-      emit("str %s, [%s, #%d]", Acc64(), AccSP64(), WORD * 2);
-      emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD);
       break;
     case AAT_MULTIPLY:
-      emit("ldr %s, [%s, #%d]", Acc64(), AccSP64(), WORD * 2);
-      emit("ldr %s, [%s, #%d]", Tmp0_64(), AccSP64(), WORD);
       emit("mul %s, %s, %s", Acc64(), Acc64(), Tmp0_64());
-      emit("str %s, [%s, #%d]", Acc64(), AccSP64(), WORD * 2);
-      emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD);
       break;
     case AAT_DIVIDE:
     /**
      * TODO: Need to add code to throw error when dividing by ZERO
      */
-      emit("ldr %s, [%s, #%d]", Acc64(), AccSP64(), WORD * 2);
-      emit("ldr %s, [%s, #%d]", Tmp0_64(), AccSP64(), WORD);
       emit("sdiv %s, %s, %s", Acc64(), Acc64(), Tmp0_64());
-      emit("str %s, [%s, #%d]", Acc64(), AccSP64(), WORD * 2);
-      emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD);
       break;
     case AAT_LT:
       
@@ -269,9 +261,20 @@ void generateOpExp64(AATexpression tree){
       break;
     default: emit("Bad 64bit Operator Expression");
   }
+  if ( tree->u.operator.left->size_type == REG32 || tree->u.operator.right->size_type == REG32) {
+    emit("str %s, [%s, #%d]", Acc64(), AccSP64(), WORD);
+    emit("add %s, %s, #%d", AccSP32(), AccSP32(), HALFWORD);
+  } else {
+    emit("str %s, [%s, #%d]", Acc64(), AccSP64(), WORD * 2);
+    emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD);
+  }
 }
 
 void generateOpExp32(AATexpression tree){
+    /** REFACTOR THIS HERE AND RESTORE BELOW SWITCH AND REMOVE REDUNCDANT CODE
+      emit("ldr %s, [%s, #%d]", Tmp0_32(), AccSP32(), WORD);
+      emit("ldr %s, [%s, #%d]", Tmp1_32(), AccSP32(), HALFWORD);
+      */
   switch (tree->u.operator.op){
     case AAT_PLUS:
       emit("ldr %s, [%s, #%d]", Tmp0_32(), AccSP32(), WORD);
@@ -382,6 +385,11 @@ void generateOpExp32(AATexpression tree){
     break;
     default: emit("Bad 64bit Operator Expression");
   }
+  /** ADD THIS CODE AFTER SWITCH AND REMOVE FROM EACH CASE...REDUNDANT
+   *  emit("str %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
+   *  emit("add %s, %s, #%d", AccSP32(), AccSP32(), HALFWORD);
+   * 
+   */
 }
 void addActualsToStack(AATexpressionList actual){
   if (!actual)
@@ -673,7 +681,7 @@ void emitAllocate(void) {
     "\tadd fp, sp, #16    //store set fp for this frame\n"
 
     "\tldr w12, [FP, #32]  // get size arg from params 32 bit size\n"
-    "\tsxtw x12, w12\n    //transfer 32bit to 64bit for memory access"
+    "\tsxtw x12, w12    //transfer 32bit to 64bit for memory access\n"
     "\tmov x14, #16 //used in heap_size_test loop\n"
     "\tb heap_size_test\n"
   );

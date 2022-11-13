@@ -235,9 +235,6 @@ envEntry analyzeFormal(environment typeEnv, environment functionEnv, environment
     return varType;
 }
 
-/* compares function def to prototype formal typeList. */
-/* Adds function def formals to varEnv + env_arm64 for offset calculations */
-/* Adds function protoType formals to arm64 envs for memory offset calculations*/
 void visitFormals(environment typeEnv, environment varEnv, typeList protoList, ASTfunctionDec function, ASTformalList formals){
   if (!formals && protoList || formals && !protoList){
     Error(function->line, " function formals differ from function prototype");
@@ -730,13 +727,7 @@ expressionRec analyzeVar(environment typeEnv, environment functionEnv, environme
         /* return ExpressionRec(IntegerType(),NULL); */
         return ExpressionRec(NULL, ConstantExpression(0, 0));
       }
-      /**
-       * TODO: Need to fix array memory access to correctly function in assembly
-       * probably need to get the right register type WN or XN for offset
-       * acces is in integer(reg32) arr[int] but memory access is in reg64
-       * 
-       */
-      return ExpressionRec(baseType.typ->u.array, ArrayVariable(baseType.tree, indexExp, baseType.typ->size_type, baseType.typ->size_type)); 
+      return ExpressionRec(baseType.typ->u.array, ArrayVariable(baseType.tree, indexExp, baseType.typ->u.array->size_type, baseType.typ->u.array->size_type)); 
     break;
     case ClassVar:
       baseType = analyzeVar(typeEnv, functionEnv, varEnv, var->u.classVar.base);
