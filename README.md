@@ -15,6 +15,8 @@ With that being said, I also have made changes to adhere to the standard memory 
 
 Despite the name, ```Simple Java Compiler```, this is not a java compiler, which would compile to byte code that runs on the java virtual machine. This compiler has some keywords and syntax similar to java, and thus is probably where the name came from.
 
+```Note:``` The current assembly generated is highly inefficent. My plan is once the compiler is generating accurate assembly code that works, I will go back and develop ways to optimize for efficency. The current state is a stepping stone for me to learn how a compiler works.
+
 To build: ```cd src/build && make```
 To build debug: ```cd src/build && make debug```
 
@@ -26,3 +28,4 @@ Next Steps:
 3. Free memory from the AST in semantic.c in post order
     -> Memory clean up accross program
 4. Add ```char``` type, ```char[]```, and ```strings```
+5. Optimize generated assembly
