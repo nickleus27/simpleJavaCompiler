@@ -103,6 +103,7 @@ void updateMemTotals(environment env){
      memTotals->size_1 = env->sizes.size_1;
 }
 
+/* returns current scope value and decrements to previous scope */
 int endScope(environment env) {
   updateMemTotals(env);
   stackElem temp;
@@ -141,7 +142,7 @@ int endScope(environment env) {
     env->stack = env->stack->next;
     free(temp);
   }
-  return --env->scope;
+  return env->scope--;
 }
 
 void AddBuiltinTypes(environment env) {

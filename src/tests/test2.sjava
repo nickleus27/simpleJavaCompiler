@@ -1,11 +1,22 @@
-/*int[] newArray() {
-    int arr[] = new int[5];
+class foo{
+    int i;
+}
+/*
+int[]
+newArray(int size) {
+    int arr[] = new int[size];
     return arr;
-}*/
+}
+*/
 
 void main(){
-    int arr[] = new int[5];
+    int arr[] = new int[5];//newArr(5);
     arr[0] = 18;
     int i = arr[0];
     printInt(i);
 }
+
+foo newFoo() {
+    return new foo();
+}
+

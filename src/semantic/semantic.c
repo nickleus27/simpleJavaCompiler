@@ -103,6 +103,13 @@ AATstatement analyzeProgram(ASTprogram program) {
   /* analyze functions */
   AATstatement stm = visitFunctionList(typeEnv, functionEnv, varEnv, program->functiondecs);
   AATseqStmCleanUp(stm);
+  /**
+   * TODO:  Start cleaning up memory!
+   *        Need to free AST at the end of each function in this class POST-ORDER
+   *        starting memory clean up here with free arm64 environments
+   */
+  free_arm64_env(functionStack);
+  free_arm64_env(argStack);
   return AATpop();
 }
 AATstatement visitFunctionList(environment typeEnv, environment functionEnv, environment varEnv, ASTfunctionDecList function){
@@ -478,8 +485,11 @@ AATstatement analyzeStatement(environment typeEnv, environment functionEnv, envi
     case BlockStm:
     {
       int thisForStmFlag = forStmFlag;
-      if( !thisForStmFlag )
+      if( !thisForStmFlag ){
+        /* this arm64 needs to be called first */
+        beginScope_Arm64(functionStack, getScope(varEnv));
         beginScope(varEnv);
+      }
       else
         forStmFlag = OFF;
       AATstatement stmPtr = visitStatementList(typeEnv, functionEnv, varEnv, statement->u.blockStm.statements);
@@ -570,6 +580,7 @@ AATstatement analyzeStatement(environment typeEnv, environment functionEnv, envi
   case ForStm:
     {
       forStmFlag = ON;
+      beginScope_Arm64(functionStack, getScope(varEnv));
       beginScope(varEnv);
       AATstatement init = analyzeStatement(typeEnv, functionEnv, varEnv, statement->u.forStm.initialize);
       expressionRec test = analyzeExpression(typeEnv, functionEnv, varEnv, statement->u.forStm.test);

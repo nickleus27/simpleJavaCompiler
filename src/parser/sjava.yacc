@@ -74,6 +74,7 @@ ASTvariable ASTclassArray(ASTvariable first, ASTvariable third){
 %type <ExpressionList> exp_lst
 %type <Expression> exp new_arr_exp new_exp
 %type <Variable> var class_var arr_var cls_arr nd_arr var_types
+%type <string_value> prim_typ arr_typ nd_ar_tp ret_typ
 
 %token <string_value> IDENTIFIER
 /* todo(Char): add token <string_value> for CHAR & STRING */
@@ -113,13 +114,30 @@ program: class_lst funct_lst YYEOF { ASTroot = ASTProgram(1, $1, $2); }
 funct_lst:                                              { $$ = NULL; }
 |               funct_lst   prototype                   { $$ = ASTFunctionDecList($2->line, $2, $1); }
 |               funct_lst   funct_def                   { $$ = ASTFunctionDecList($2->line, $2, $1); }
-prototype:  IDENTIFIER IDENTIFIER LPAREN formal_lst RPAREN SEMICOLON                { $$ = ASTPrototype($1.line_number, $1.value, $2.value, $4); }
-funct_def:  IDENTIFIER IDENTIFIER LPAREN formal_lst RPAREN LBRACE stmnt_lst RBRACE  { $$ =  ASTFunctionDef($1.line_number, $1.value, $2.value, $4, $7); }
+
+/* function return types */
+/*
+** TODO: need to add functionality for return array types
+** Look to line 211 for arr delcaration example after
+** adding int arrayDimension field to ASTFunctionDef and ASTPrototype
+** add array checking in analyzeFunction in semantic.c
+ **/
+prim_typ:       IDENTIFIER                              { $$ = $1; }
+arr_typ:        prim_typ LBRACK RBRACK                  { $$ = $1; }
+nd_ar_tp:       arr_typ LBRACK RBRACK                   { $$ = $1; }
+|               nd_ar_tp LBRACK RBRACK                  { $$ = $1; }
+ret_typ:        prim_typ                                { $$ = $1; }
+|               arr_typ                                 { $$ = $1; }
+|               nd_ar_tp                                { $$ = $1; }
+
+prototype:  ret_typ IDENTIFIER LPAREN formal_lst RPAREN SEMICOLON                { $$ = ASTPrototype($1.line_number, $1.value, $2.value, $4); }
+funct_def:  ret_typ IDENTIFIER LPAREN formal_lst RPAREN LBRACE stmnt_lst RBRACE  { $$ =  ASTFunctionDef($1.line_number, $1.value, $2.value, $4, $7); }
 formal_lst:                                             { $$ = NULL;}
 |               { $<FormalList>$ = NULL; } formal       { $$ = ASTFormalList($2->line, $2, $<FormalList>1);}
 |               formal_lst  COMMA formal                { $$ = ASTFormalList($3->line, $3, $1); }
 formal:         IDENTIFIER IDENTIFIER                   { $$ = ASTFormal($1.line_number, $1.value, $2.value, 0); }
-|               formal LBRACK RBRACK                    { $$ = $1; $1->arraydimension++;} 
+|               formal LBRACK RBRACK                    { $$ = $1; $1->arraydimension++;}
+/* need to add nd array for formals */ 
 
 /* class rules */
 class_lst:  class_lst    a_class                        { $$ = ASTClassList($2->line, $2, $1); }

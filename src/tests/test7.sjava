@@ -1,0 +1,17 @@
+void main(){
+    int row = 5;
+    int col = 15;
+    int arr[][] = new int[row][];
+    for (int i = 0; i<row; i++) {
+        arr[i] = new int[col];
+        for (int j = 0; j<col; j++) {
+            arr[i][j] = j*100+1;
+        }
+    }
+    for (int i = 0; i<row; i++) {
+        for (int j = 0; j<col; j++) {
+            printInt(arr[i][j]);
+        }
+    }
+
+}

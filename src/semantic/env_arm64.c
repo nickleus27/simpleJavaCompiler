@@ -9,34 +9,57 @@
 #include <stdlib.h>
 #include "../codegen/MachineDependent.h"
 
+/**
+ * TODO:1 Make stack markers for begin scope and end scope SINGLETON INSTANCES.
+ * Will need to remove free calls to A64_newScope begin marker and A64_endScope
+ * end marker in nextElem function and nextArgElem.
+ * 
+ * TODO:2 Document/comment how the data structure controls the memory allocation for
+ * stack frames when a function is analyzed in semantic.c and traverses multiple scopes.
+ * This class optimizes memory usage between different size types and different scopes
+ * to use as little memory for local vars per stack frame.
+ */
+
 struct stack_{
-    enum{A64_Var, A64_endScope}kind;
+    enum{A64_Var, A64_newScope, A64_endScope}kind;
+    stack next;
     union{
         struct{
             int* offset;
-            stack rest;
         }var;
         struct{
             int nextScope;
-            stack rest;
-        }endScope;
+        }newScope;
     }u;
 };
+struct stack_queue_
+{
+    stack first;
+    stack last;
+};
+typedef struct stack_queue_ *stack_queue;
 struct stack_env_
 {
     int space_left;
     int size;
-    stack *vector;
+    stack_queue *vector;
     env_sizes mem_sizes;
-    //env_sizes block_totals;
 };
-/* globals */
-//stack stack_8, stack_4, stack_1 = NULL;
+
+stack_queue stack_env_get(stack_env env, int index );
+void enter_scope_marker_toQueue( stack_env env, int scope, bool beginScope);
+
+stack_queue new_stack_queue(){
+    stack_queue retval = (stack_queue)malloc(sizeof(struct stack_queue_));
+    retval->first = NULL;
+    retval->last = NULL;
+    return retval;
+}
 
 stack_env new_stack_env(int init_size , bool functionStack)
 {
     stack_env env = (stack_env)malloc(sizeof(*env));
-    env->vector = (stack *)malloc(init_size * sizeof(stack *));//initialize array to size set to argument
+    env->vector = (stack_queue *)malloc(init_size * sizeof(stack_queue *));//initialize array to size set to argument
     if(!env->vector){
         printf("Failed malloc\n");
         exit(EXIT_FAILURE);
@@ -50,21 +73,27 @@ stack_env new_stack_env(int init_size , bool functionStack)
     return env;
 }
 
-stack new_stack_elem(int* data, stack first){
+void add_new_stack_elem(int* data, stack_queue queue){
     stack retval = (stack)malloc(sizeof(*retval));
-    //retval->u.var.offset = (int*)malloc(sizeof(int));
+    retval->kind = A64_Var;
     retval->u.var.offset = data;
-    retval->u.var.rest = first;
-    return retval;
+    retval->next = NULL;
+    if (!queue->first) {
+        queue->first = queue->last = retval;
+    } else {
+        queue->last->next = retval;
+        queue->last = retval;
+    }
+    //return retval;
 }
 
 
 void enter_arm64( stack_env env, int index, int* data ){
     if(env->size <= index){
         if(env->space_left == 0 ){//if array is full
-            stack *ptrTemp = NULL;
+            stack_queue *ptrTemp = NULL;
             int maxLength = env->size<<INCREMENT;//1;//double the size of array (maxLength x 2)
-            ptrTemp = (stack *)realloc(env->vector, maxLength * sizeof(stack *));//have vptrTemp = realloc incase not succesful
+            ptrTemp = (stack_queue *)realloc(env->vector, maxLength * sizeof(stack_queue *));//have vptrTemp = realloc incase not succesful
             if( ptrTemp == NULL )
             {//exit it realloc failed
                 printf("Failed realloc\n");
@@ -73,17 +102,31 @@ void enter_arm64( stack_env env, int index, int* data ){
             env->space_left = maxLength - env->size;//space left after growing
             env->vector = ptrTemp;//have env point to realloc array
         }
-        stack stack_elem = new_stack_elem(data, NULL);
-        env->vector[env->size++] = stack_elem;//now that we have space push data to next available spot
+
+        /* add new initial queue to new scope size*/
+        env->vector[env->size++] = new_stack_queue();//now that we have space push stack queue to next available spot
         env->space_left--;
-    }else{
-        env->vector[index] = new_stack_elem(data, stack_env_get(env, index));
     }
+    if (!stack_env_get(env, index)) {
+        env->vector[index] = new_stack_queue();
+    }
+    add_new_stack_elem(data, stack_env_get(env, index));
 }
 
 //free memory back to heap
 void free_arm64_env(stack_env env)
 {
+    for (int i = 0; i<env->size; i++) {
+        if (env->vector[i]) {
+            stack temp = env->vector[i]->first;
+            while (temp) {
+                stack toFree = temp;
+                temp = temp->next;
+                free(toFree);
+            }
+            free(env->vector[i]);
+        }
+    }
     free(env->vector);
     free(env);
 }
@@ -94,12 +137,12 @@ int stack_env_size(stack_env env)
     return env->size;
 }
 
-/* returns stack at index */
-stack stack_env_get(stack_env env, int index )
+/* returns queue at index */
+stack_queue stack_env_get(stack_env env, int index )
 {
     if(index >= env->size || index < 0)
     {
-        printf("Error: index %d out of bounds ", index);
+        printf("Error: index %d out of bounds\n", index);
         free_arm64_env(env);
         exit(EXIT_FAILURE);
     }
@@ -117,53 +160,107 @@ void stack_env_clear(stack_env env, int size)
 }
 
 
-void addMemSizes(stack_env env, env_sizes mem){//}, env_sizes block){
+void addMemSizes(stack_env env, env_sizes mem){
     env->mem_sizes = mem;
-    //env->block_totals = block;
 }
 
+void add_new_stack_begin(stack_queue queue, int scope){
+    stack retval = (stack)malloc(sizeof(*retval));
+    retval->kind = A64_newScope;
+    retval->u.newScope.nextScope = scope+1;
+    retval->next = NULL;
+    if (!queue->first) {
+        queue->first = queue->last = retval;
+    } else {
+        queue->last->next = retval;
+        queue->last = retval;
+    }
+}
+
+/* this needs to be called before incrementing to next scope */
+void beginScope_Arm64(stack_env env, int scope) {
+    if(scope){
+        enter_scope_marker_toQueue(env, scope, true);
+    }
+}
+
+void add_new_stack_end(stack_queue queue){
+    stack retval = (stack)malloc(sizeof(*retval));
+    retval->kind = A64_endScope;
+    retval->next = NULL;
+    if (!queue->first) {
+        queue->first = queue->last = retval;
+    } else {
+        queue->last->next = retval;
+        queue->last = retval;
+    }
+}
+
+void enter_scope_marker_toQueue( stack_env env, int scope, bool beginScope) {
+    if(env->size <= scope){
+        if(env->space_left == 0 ){//if array is full
+            stack_queue *ptrTemp = NULL;
+            int maxLength = env->size<<INCREMENT;//1;//double the size of array (maxLength x 2)
+            ptrTemp = (stack_queue *)realloc(env->vector, maxLength * sizeof(stack_queue *));//have vptrTemp = realloc incase not succesful
+            if( ptrTemp == NULL )
+            {//exit it realloc failed
+                printf("Failed realloc\n");
+                exit(EXIT_FAILURE);
+            }
+            env->space_left = maxLength - env->size;//space left after growing
+            env->vector = ptrTemp;//have env point to realloc array
+        }
+
+        /* add new initial queue to new scope size*/
+        env->vector[env->size++] = new_stack_queue();//now that we have space push stack queue to next available spot
+        env->space_left--;
+    }
+    if (!stack_env_get(env, scope)) {
+        env->vector[scope] = new_stack_queue();
+    }
+    if (beginScope) {
+        add_new_stack_begin(stack_env_get(env, scope), scope);
+    } else {
+        add_new_stack_end(stack_env_get(env, scope));
+    }
+}
 
 void arm64endScope(stack_env env, int scope){
     if(scope){
-    stack elem = (stack)malloc(sizeof(struct stack_));
-    elem->u.endScope.nextScope = scope+1;
-    elem->u.endScope.rest = env->vector[scope];
+        enter_scope_marker_toQueue(env, scope, false);
     }
 }
 
 /* generate offset to put actual args on stack in caller function
 *   the offset will be + SP after moving stack pointer down totalArgSize*/
-void nextArgElem(stack_env env, stack element, int offset_8, int offset_4, int offset_1, int totalArgSize, int savedReg){
+void nextArgElem(stack_env env, stack_queue queue, stack element, int offset_8, int offset_4, int offset_1, int totalArgSize, int savedReg){
     if (! element ) return;
     /*add element to appropriate bucket 8,4,1 */
     switch(element->kind){
         case(A64_Var):
         {
             /* arg scope will only be 0 */
-            env->vector[0] = env->vector[0]->u.var.rest;
+            queue->first = element->next;
             switch(*element->u.var.offset){
                 case(PTR):
                 {
                     offset_8 += 8;
                     *element->u.var.offset =  (totalArgSize - offset_8)+ PTR + savedReg; //updating integer pointer
-                    //env->vector[0] = element->u.var.rest;
-                    nextArgElem(env, element->u.var.rest, offset_8, offset_4, offset_1, totalArgSize, savedReg);
+                    nextArgElem(env, queue, element->next, offset_8, offset_4, offset_1, totalArgSize, savedReg);
                     offset_8-=8; //remove offset from as leaving the scope
                 }break;
                 case(INT):
                 {
                     offset_4 += 4;
                     *element->u.var.offset =  (totalArgSize - offset_4)+ INT + savedReg;//offset will always be negative below fp
-                    //env->vector[0] = element->u.var.rest;
-                    nextArgElem(env, element->u.var.rest, offset_8, offset_4, offset_1, totalArgSize, savedReg);
+                    nextArgElem(env, queue, element->next, offset_8, offset_4, offset_1, totalArgSize, savedReg);
                     offset_4-=4;
                 }break;
                 case(BOOL):
                 {
                     offset_1 += 1;
                     *element->u.var.offset =  (totalArgSize - offset_1)+ BOOL + savedReg; //offset will always be negative below fp
-                    //env->vector[0] = element->u.var.rest;
-                    nextArgElem(env, element->u.var.rest, offset_8, offset_4, offset_1, totalArgSize, savedReg);
+                    nextArgElem(env, queue, element->next, offset_8, offset_4, offset_1, totalArgSize, savedReg);
                     offset_1-=1;
                 }break;
             }
@@ -192,9 +289,10 @@ int pushArgsOnStack(stack_env env, env_sizes mem_sizes){
     int offset_8 = 0,
     offset_4 = mem_sizes->size_8,
     offset_1 = offset_4 + mem_sizes->size_4;
-    while(env->vector[0])//args are stored in scope0
-        nextArgElem(env, env->vector[0], offset_8, offset_4, offset_1, totalArgSize, 0);
-
+    //while(env->vector[0])//args are stored in scope0
+    if ( env->vector[0] ) {
+        nextArgElem(env, env->vector[0], env->vector[0]->first, offset_8, offset_4, offset_1, totalArgSize, 0);
+    }
     free(mem_sizes);
    return totalArgSize;
 
@@ -209,68 +307,65 @@ void generateArgStackMemory(stack_env env, int totalArgSize){
     int offset_8 = 0,
     offset_4 = env->mem_sizes->size_8,
     offset_1 = offset_4 + env->mem_sizes->size_4;
-    while(env->vector[0])//args are stored in scope0
-        nextArgElem(env, env->vector[0], offset_8, offset_4, offset_1, totalArgSize, savedRegs);
+    //while(env->vector[0])//args are stored in scope0
+    if (env->vector[0]) {
+        nextArgElem(env, env->vector[0], env->vector[0]->first, offset_8, offset_4, offset_1, totalArgSize, savedRegs);
+    }
     free(env->mem_sizes);
 }
 
 /*follow the current scope and adjust the stack. while doing so update the integer pointers */
-void nextElem(stack_env env, int index, stack element, int offset_8, int offset_4, int offset_1){
+void nextElem(stack_env env, stack_queue queue, stack element, int offset_8, int offset_4, int offset_1){
     if (! element ) return;
     /*add element to appropriate bucket 8,4,1 */
     switch(element->kind){
         case(A64_Var):
         {
-            env->vector[index] = env->vector[index]->u.var.rest;
+            queue->first = element->next;
             switch(*element->u.var.offset){
                 case(PTR):
                 {
                     offset_8 += 8;
                     *element->u.var.offset =  0-offset_8; //updating integer pointer
-                    /**
-                     *  do i need this next statement:
-                     * //env->vector[index] = element->u.var.rest;?????
-                    */
-
-                    //env->vector[index] = element->u.var.rest;
-                    nextElem(env, index, element->u.var.rest, offset_8, offset_4, offset_1);
+                    nextElem(env, queue, element->next, offset_8, offset_4, offset_1);
                     offset_8-=8; //remove offset from as leaving the scope
                 }break;
                 case(INT):
                 {
                     offset_4 += 4;
                     *element->u.var.offset =  0-offset_4;//offset will always be negative below fp
-                                     /**
-                     *  do i need this next statement:
-                     * //env->vector[index] = element->u.var.rest;?????
-                    */
-                    //env->vector[index] = element->u.var.rest;
-                    nextElem(env, index, element->u.var.rest, offset_8, offset_4, offset_1);
+                    nextElem(env, queue, element->next, offset_8, offset_4, offset_1);
                     offset_4-=4;
                 }break;
                 case(BOOL):
                 {
                     offset_1 += 1;
                     *element->u.var.offset =  0-offset_1; //offset will always be negative below fp
-                     /**
-                     *  do i need this next statement:
-                     * //env->vector[index] = element->u.var.rest;?????
-                    */
-                    //env->vector[index] = element->u.var.rest;
-                    nextElem(env, index, element->u.var.rest, offset_8, offset_4, offset_1);
+                    nextElem(env, queue, element->next, offset_8, offset_4, offset_1);
                     offset_1-=1;
                 }break;
             }
             free(element);
         }break;
-        case(A64_endScope):
+        case (A64_newScope):
         {
-            stack next = env->vector[element->u.endScope.nextScope];
-            env->vector[index] = env->vector[index]->u.endScope.rest;
-            nextElem(env, element->u.endScope.nextScope, next, offset_8, offset_4, offset_1);
+            
+            nextElem(env, env->vector[element->u.newScope.nextScope], env->vector[element->u.newScope.nextScope]->first, offset_8, offset_4, offset_1);
+            queue->first = element->next;
+            nextElem(env, queue, element->next, offset_8, offset_4, offset_1);
             free(element);
         }break;
-        default: break;
+        case(A64_endScope):
+        {
+            queue->first = element->next;
+            free(element);
+            return;
+        }break;
+        default:
+        {
+            printf("Error in calculating local function variables stack memory offsets");
+            break;
+        }
     }
 
 }
@@ -292,10 +387,16 @@ int generateStackMemory(stack_env env){
         offset_1 = offset_4 + env->mem_sizes->size_4;
 
     /*loop through each bucket and follow the chain until empty */
-   for(int i = 1; i < env->size; i++){//start i == 1 to skip scope 0 which == args not local vars
-    while(env->vector[i])
-        nextElem(env, i, env->vector[i], offset_8, offset_4, offset_1);
-   }
+    for (int i = 1; i < env->size; i++) {//start i == 1 to skip scope 0 which == args not local vars
+        if (env->vector[i]) {
+            while(env->vector[i]->first) {
+                //printf("Entering scope %d. If success the next scope will not iterate frome here.", i);
+                nextElem(env, env->vector[i], env->vector[i]->first, offset_8, offset_4, offset_1);
+            }
+        } else {
+            printf("Stack queue for stack frame memory alignment null. No variables entered");
+        }
+    }
     free(env->mem_sizes);
    return localMemTotal;
 }

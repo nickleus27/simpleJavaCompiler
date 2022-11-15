@@ -51,6 +51,11 @@ ASTinstanceVarDecList ASTInstanceVarDecList(int line, ASTinstanceVarDec first,
   return retval;
 }
 
+/**
+ * TODO: Need to add functionality for array return types
+ * The same way the this is acheived with variable types with an
+ * initial array dimension integer
+ */
 ASTfunctionDec ASTFunctionDef(int line, char *returntype, char *name,
 			      ASTformalList formals,
 			      ASTstatementList body) {
