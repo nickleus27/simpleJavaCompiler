@@ -24,6 +24,7 @@ To build debug: ```cd src/build && make debug```
 
 Next Steps:
 1. Add ```delete``` keyword, and implementation
+    A. My main focus at the moment is working on the allocate and free functions that work under the hood with new and delete keywords. I am currently writing these functions in C, and I will use the assembly that the C files generates for the new and delete keywords in my compiler. I only just started these functions and I am still a far way from completion. The first heap implementation I am using is a free list that uses the first fit strategy. This is a linked list of free blocks in memory. I will elaborate more on the implementation when I am done.
 2. Finish memory configuration for classes in env_Arm64.c, semantic.c
 3. Free memory from the AST in semantic.c in post order
     -> Memory clean up accross program
