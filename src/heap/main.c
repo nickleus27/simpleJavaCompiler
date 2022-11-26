@@ -24,8 +24,8 @@ int main(){
     for (int i = 0; i < size/4; i++) {
         printf("This is arr[%d] == %d\n", i, arr[i]);
     }
-    //delete(arr);
     delete(arr2);
+    int* arr3 = (int*)allocate(size);
     delete(arr);
     arr = (int*)allocate(size);
 }

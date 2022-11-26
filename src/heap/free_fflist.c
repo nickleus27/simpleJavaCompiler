@@ -48,11 +48,11 @@ void delete(void* toDelete) {
 
             *(int*)updateSize = size1 + size2; //update the free block size to combine two adjacent blocks
 
-            next_ptr = next_ptr-1;
+            //next_ptr = next_ptr-1;
             //next_ptr = (*(char*)prev_ptr)+8;
 
 
-            *prev_ptr = next_ptr; //update the next pointer to point to next block from the second adjacent block
+            *prev_ptr = *next_ptr; //update the next pointer to point to next block from the second adjacent block
         }
         return;
     }
