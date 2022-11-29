@@ -11,6 +11,7 @@
  * 
  * 
  * THIS IS STILL A WORK IN PROGRESS
+ * https://stackoverflow.com/questions/2855121/what-is-the-purpose-of-using-pedantic-in-the-gcc-g-compiler
  */
 
 #include "alloc_fflist.h"
@@ -56,14 +57,43 @@ void delete(void* toDelete) {
         }
         return;
     }
-    /* move down the chain until prev_ptr is the link behind block to dealloc*/
-    while ( *next_ptr && *next_ptr < toDelete ) {
-        prev_ptr = *next_ptr;
-        next_ptr = (prev_ptr+1);
-    }
-    /**
-     * TODO: when free blocks are in front of toDelete
-     * 
-     */
 
+    void** next_link = next_ptr; //next_link points at the prev_ptr next link
+    next_ptr = *next_ptr; //next now point to next free block size tag
+    /* move down the chain until prev_ptr is the link behind block to dealloc*/
+    while ( (void*)next_ptr < toDelete ) {
+        next_link = prev_ptr +1; //next_link points at the prev_ptr next link
+        prev_ptr = next_ptr; //prev_ptr now point at the next size tag
+        next_ptr++; //next_ptr now a next link
+        next_ptr = *next_ptr;//next_ptr updated to next free block size tag
+    }
+    int prev_size_block = (*(int*)prev_ptr); //size of previous free block
+    int toDelete_size_block = (*(int*)toDelete);
+    int next_size_block = (*(int*)next_ptr);
+    /*check to see if prev_ptr free block is adjacent to toDelete block and toDelete block is adjacent to next_ptr free block*/
+    if ( (char*)prev_ptr + prev_size_block +8 == toDelete && (char*)toDelete + toDelete_size_block +8 == (void*)next_ptr ) {
+        (*(int*)prev_ptr) = prev_size_block + toDelete_size_block + next_size_block;
+        next_ptr++; //move to next_link
+        *next_link = *next_ptr; //set next link to reach over adjacent free blocks
+        return;
+    }
+    /*check to see if prev_ptr free block is adjacent to toDelete block */
+    if ( (char*)prev_ptr + prev_size_block +8 == toDelete ) {
+        (*(int*)prev_ptr) = prev_size_block + toDelete_size_block; //update size of previous block
+        *next_link = next_ptr; //set next link to reach over adjacent free block
+        return;
+    } 
+    /*check to see if toDelete block is adjacent to next_ptr free block*/
+    if ( (char*)toDelete + toDelete_size_block +8 == (void*)next_ptr ) {
+        (*(int*)toDelete) = toDelete_size_block + next_size_block; //update size of toDelete block
+        next_link = (void**)((char*)toDelete+8); // point to toDelete block next_link
+        next_ptr++; // point to next_ptr blocks next_link
+        *next_link = *next_ptr; //set next link to reach over adjacent free block
+        return;
+    } 
+
+    /* link prev_ptr next-link to toDelete block and toDelete block to next_ptr*/
+    *next_link = toDelete;
+    next_link = (void**)((char*)toDelete +8); //now points to toDelete block next link
+    *next_link = next_ptr;
 }
