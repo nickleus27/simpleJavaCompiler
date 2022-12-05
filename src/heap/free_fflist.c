@@ -57,7 +57,10 @@ void delete(void* toDelete) {
         }
         return;
     }
-
+    /**
+     * TODO: what if never enter while loop? <------------------------#### 
+     * 
+     */
     void** next_link = next_ptr; //next_link points at the prev_ptr next link
     next_ptr = *next_ptr; //next now point to next free block size tag
     /* move down the chain until prev_ptr is the link behind block to dealloc*/
@@ -85,6 +88,7 @@ void delete(void* toDelete) {
     } 
     /*check to see if toDelete block is adjacent to next_ptr free block*/
     if ( (char*)toDelete + toDelete_size_block +8 == (void*)next_ptr ) {
+        *next_link = toDelete;
         (*(int*)toDelete) = toDelete_size_block + next_size_block; //update size of toDelete block
         next_link = (void**)((char*)toDelete+8); // point to toDelete block next_link
         next_ptr++; // point to next_ptr blocks next_link
