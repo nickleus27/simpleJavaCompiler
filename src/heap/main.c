@@ -6,7 +6,10 @@ int main(){
     int size = 16;
     int* arr = (int*)allocate(size);
     int* arr2 = (int*)allocate(size);
-    int* arr3 = (int*)allocate(size);
+    int* arr3 = (int*)allocate(24);
+    int* arr4 = (int*)allocate(size);
+    int* arr5 = (int*)allocate(size);
+
 
     for (int i = 0; i < size/4; i++) {
         arr[i]=i;
@@ -30,6 +33,11 @@ int main(){
     }
     delete(arr);
     delete(arr3);
-    delete(arr2);
+    arr3 = (int*)allocate(24);
+    if(!arr3){
+        printf("null, did not allocate\n");
+    }
     arr = (int*)allocate(size);
+    int* arr6 = (int*)allocate(size);
+    
 }

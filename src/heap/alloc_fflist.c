@@ -81,17 +81,19 @@ void* allocate(int size) {
      */
     if ( size == (*(int*)prev_ptr) ) {
         ret = next_ptr;
-        free_list = (char*)(next_ptr) + size;
+        free_list = *next_ptr;
         return ret;
     }
 
     next_ptr = *next_ptr;
     // search free list for big enough free space for allocation 
     // list goes free_list[0]==size, free_list[1] == next
+    int nodeSize = (*(int*)next_ptr);
     while ( *next_ptr && (*(int*)next_ptr) < size ) {
         next_ptr++;
         prev_ptr = next_ptr;
         next_ptr = *next_ptr;
+        nodeSize = (*(int*)next_ptr);
     }
 
     /**
@@ -104,7 +106,7 @@ void* allocate(int size) {
         /**
          * TODO: NEED TO TEST!
          */
-        if ( size <= (*(int*)prev_ptr) ) {
+        if ( size <= nodeSize ) {
             ret = next_link;
             int free_size = (*(int*)next_ptr);
             (*(int*)next_ptr) = size;
@@ -124,7 +126,7 @@ void* allocate(int size) {
      * @brief if not at end of free chain but first free block and
      * prev_pointer points to a big enough chunk of memory
      */
-    if ( size < (*(int*)prev_ptr) ) {
+    if ( size < nodeSize ) {
         ret = next_link;
         int free_size = (*(int*)next_ptr);
         (*(int*)next_ptr) = size;
@@ -140,9 +142,10 @@ void* allocate(int size) {
      * prev_pointer points to a an equal size chunk of memory
      * free_size does not need to be updated, just point free_list to
      */
-    if ( size == (*(int*)prev_ptr) ) {
+    if ( size == nodeSize ) {
         ret = next_link;
-        *prev_ptr = (char*)(next_ptr) + size;
+        prev_ptr++;
+        *prev_ptr = *next_link;
         return ret;
     }
 

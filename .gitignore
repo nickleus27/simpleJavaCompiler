@@ -9,3 +9,5 @@ src/build/lex.yy.c
 src/build/parser.h
 src/build/parser.c
 src/build/sjc
+src/heap/emit_alloc_fflist.c
+src/heap/emit_fflist.c
