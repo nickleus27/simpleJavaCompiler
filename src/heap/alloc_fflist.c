@@ -85,15 +85,16 @@ void* allocate(int size) {
         return ret;
     }
 
-    next_ptr = *next_ptr;
+    prev_ptr++; // points to next_link
+    next_ptr = *next_ptr; //now pointing at size tag
     // search free list for big enough free space for allocation 
     // list goes free_list[0]==size, free_list[1] == next
     int nodeSize = (*(int*)next_ptr);
-    while ( *next_ptr && (*(int*)next_ptr) < size ) {
-        next_ptr++;
-        prev_ptr = next_ptr;
-        next_ptr = *next_ptr;
-        nodeSize = (*(int*)next_ptr);
+    while ( *next_ptr && nodeSize < size ) {
+        next_ptr++; //now pointing at next link
+        prev_ptr = next_ptr; //next link
+        next_ptr = *next_ptr; //move to next node...points at size tag
+        nodeSize = (*(int*)next_ptr); // store the size
     }
 
     /**
@@ -130,7 +131,7 @@ void* allocate(int size) {
         ret = next_link;
         int free_size = (*(int*)next_ptr);
         (*(int*)next_ptr) = size;
-        *prev_ptr = (char*)(next_ptr) + size;
+        *prev_ptr = (char*)(next_link) + size;
         next_link = *prev_ptr;
         (*(int*)next_link) = free_size - size;
         return ret;
@@ -144,7 +145,6 @@ void* allocate(int size) {
      */
     if ( size == nodeSize ) {
         ret = next_link;
-        prev_ptr++;
         *prev_ptr = *next_link;
         return ret;
     }
