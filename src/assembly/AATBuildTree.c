@@ -27,7 +27,7 @@ AATexpression ClassVariable(AATexpression base, int offset, int size_type){
    * compatibility. Double check in analyzeVar in semantic.c too.
    */
   if ( offset ) {
-    return AATMemory( AATOperator(base, _AATConstant(offset, REG64), AAT_MINUS, REG64), size_type);
+    return AATMemory( AATOperator(base, AATConstant(offset, REG64), AAT_MINUS, REG64), size_type);
   }
   else
     return AATMemory( base, size_type ); /* if no offset do not need to subtract from memory */
@@ -37,7 +37,7 @@ AATexpression ArrayVariable(AATexpression base, AATexpression index, int element
   return 
     AATMemory( 
       AATOperator(base, 
-        AATOperator(_AATConstant(elementSize, REG64), index, AAT_MULTIPLY, REG64),
+        AATOperator(AATConstant(elementSize, REG64), index, AAT_MULTIPLY, REG64),
       AAT_PLUS, REG64), 
     size_type
   );
@@ -45,11 +45,11 @@ AATexpression ArrayVariable(AATexpression base, AATexpression index, int element
 }
 
 AATexpression BaseVariable(int* offset, int size_type){
-  return AATMemory( AATOperator(AATRegister( FP(), REG64),AATConstant( offset, REG64 ), AAT_PLUS, REG64), size_type);
+  return AATMemory( AATOperator(AATRegister( FP(), REG64),AATOffset( offset, REG64 ), AAT_PLUS, REG64), size_type);
 }
 
 AATexpression ConstantExpression(int value, int size_type){
- return _AATConstant(value, size_type);
+ return AATConstant(value, size_type);
 }
 
 AATexpression CallExpression(AATexpressionList actuals, Label name, int size_type, int argMemSize){

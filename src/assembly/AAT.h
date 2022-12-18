@@ -60,10 +60,11 @@ struct AATstatement_ {
 };
 
 struct AATexpression_ {
-  enum {AAT_MEMORY, AAT_OPERATOR, AAT_FUNCTIONCALL, AAT_CONSTANT, AAT_REGISTER} kind;
+  enum {AAT_MEMORY, AAT_OPERATOR, AAT_FUNCTIONCALL, AAT_CONSTANT, AAT_OFFSET, AAT_REGISTER} kind;
   int size_type;
   union {
-    int* constant;
+    int constant;
+    int* offset;
     Register reg;
     AATexpression memory;
     struct {
@@ -93,8 +94,8 @@ AATstatement AATHalt(void);
 AATstatement AATFunctionDef(AATstatement labels, AATstatement body, int framesize);
 
 /*expressions*/
-AATexpression AATConstant(int* constant, int size_type);
-AATexpression _AATConstant(int constant, int size_type);
+AATexpression AATConstant(int constant, int size_type);
+AATexpression AATOffset(int* constant, int size_type);
 AATexpression AATRegister(Register reg, int size_type);
 AATexpression AATMemory(AATexpression mem, int size_type);
 AATexpression AATOperator(AATexpression left, AATexpression right, AAToperator op, int size_type);

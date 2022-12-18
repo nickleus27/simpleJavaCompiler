@@ -133,7 +133,11 @@ void printAATexp(AATexpression exp) {
     break;
   case AAT_CONSTANT:
     printAATindent(AATindent);
-    printf("CONSTANT: %d \n",*exp->u.constant);
+    printf("CONSTANT: %d \n", exp->u.constant);
+    break;
+  case AAT_OFFSET:
+    printAATindent(AATindent);
+    printf("OFFSET: %d \n", *exp->u.offset);
     break;
   case AAT_REGISTER:
     printAATindent(AATindent);

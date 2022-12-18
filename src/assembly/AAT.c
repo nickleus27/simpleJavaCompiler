@@ -160,20 +160,18 @@ AATexpression AATFunctionCall(Label jump, AATexpressionList actuals, int size_ty
   retval->u.functionCall.argMemSize = argMemSize;
   return retval;
 }
-AATexpression _AATConstant(int constant, int size_type){
-  AATexpression retval = (AATexpression) malloc(sizeof(struct AATexpression_));
-  retval->kind = AAT_CONSTANT;
-  retval->size_type = size_type;
-  /*TODO: need to free this memory*/
-  retval->u.constant = (int*)malloc(sizeof(int));
-  *retval->u.constant = constant;
-  return retval;
-}
-AATexpression AATConstant(int* constant, int size_type) {
+AATexpression AATConstant(int constant, int size_type){
   AATexpression retval = (AATexpression) malloc(sizeof(struct AATexpression_));
   retval->kind = AAT_CONSTANT;
   retval->size_type = size_type;
   retval->u.constant = constant;
+  return retval;
+}
+AATexpression AATOffset(int* constant, int size_type) {
+  AATexpression retval = (AATexpression) malloc(sizeof(struct AATexpression_));
+  retval->kind = AAT_OFFSET;
+  retval->size_type = size_type;
+  retval->u.offset = constant;
   return retval;
 }
 AATexpression AATRegister(Register reg, int size_type){
