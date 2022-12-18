@@ -221,6 +221,10 @@ void analyzeInstanceVarDecList(environment typeEnv, environment classVarEnv, env
     } /* enter variable here */
       enter( classVarEnv, varList->first->name, VarEntry( varType->u.typeEntry.typ, varType->u.typeEntry.typ->size_type ) );
   }
+  /**
+   * TODO: enter instance vars into arm64 env for stack offset arrangement
+   * 
+   */
 }
 /*Todo: make recursive function for instanceVarList */
 void analyzeClass(environment typeEnv, environment functionEnv, environment varEnv, ASTclass class){
@@ -648,7 +652,8 @@ expressionRec analyzeNewExp(environment typeEnv, ASTexpression exp){
     if( expType->u.typeEntry.typ->kind != class_type) return ExpressionRec( NULL, ConstantExpression(0, 0));
     /*need to update envSize function to calculate correct memory size*/
     return ExpressionRec( expType->u.typeEntry.typ, Allocate( 
-      ConstantExpression( envSize(expType->u.typeEntry.typ->u.class.instancevars), REG64)));
+      ConstantExpression( 
+        envSize(expType->u.typeEntry.typ->u.class.instancevars), INT)));
 }
 
 expressionRec analyzeNewArray(environment typeEnv, environment functionEnv, environment varEnv, ASTexpression exp){
@@ -672,10 +677,6 @@ expressionRec analyzeNewArray(environment typeEnv, environment functionEnv, envi
     Error(exp->line, " Array size must be an integer");
   expType = find(typeEnv, key);
   if( !expType ) return ExpressionRec(NULL, ConstantExpression(0, 0));
-  /**
-   * TODO: need to have the multiply use 64 bit reg because the value will be used to access memory location
-   * 
-   */
   return ExpressionRec(expType->u.typeEntry.typ, Allocate(OperatorExpression(
     expRec.tree, ConstantExpression(expType->u.typeEntry.typ->u.array->size_type, INT),
     AAT_MULTIPLY, INT)));

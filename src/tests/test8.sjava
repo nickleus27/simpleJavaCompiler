@@ -1,0 +1,7 @@
+class test{
+    int t;
+}
+
+void main(){
+    test t = new test();
+}
