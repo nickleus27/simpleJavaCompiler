@@ -137,7 +137,7 @@ void printAATexp(AATexpression exp) {
     break;
   case AAT_OFFSET:
     printAATindent(AATindent);
-    printf("OFFSET: %d \n", *exp->u.offset);
+    printf("OFFSET: %d \n", exp->u.offset->offset);
     break;
   case AAT_REGISTER:
     printAATindent(AATindent);

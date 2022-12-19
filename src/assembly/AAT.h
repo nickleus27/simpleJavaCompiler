@@ -8,6 +8,7 @@
 
 #ifndef AAT_H
 #define AAT_H
+#include "../lib/offset_ref.h"
 
 typedef struct AATexpression_ *AATexpression;
 typedef struct AATstatement_ *AATstatement;
@@ -64,7 +65,7 @@ struct AATexpression_ {
   int size_type;
   union {
     int constant;
-    int* offset;
+    offset_ref offset;
     Register reg;
     AATexpression memory;
     struct {
@@ -95,7 +96,7 @@ AATstatement AATFunctionDef(AATstatement labels, AATstatement body, int framesiz
 
 /*expressions*/
 AATexpression AATConstant(int constant, int size_type);
-AATexpression AATOffset(int* constant, int size_type);
+AATexpression AATOffset(offset_ref offset, int size_type);
 AATexpression AATRegister(Register reg, int size_type);
 AATexpression AATMemory(AATexpression mem, int size_type);
 AATexpression AATOperator(AATexpression left, AATexpression right, AAToperator op, int size_type);

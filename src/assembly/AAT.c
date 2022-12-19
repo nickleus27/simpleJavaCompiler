@@ -167,11 +167,11 @@ AATexpression AATConstant(int constant, int size_type){
   retval->u.constant = constant;
   return retval;
 }
-AATexpression AATOffset(int* constant, int size_type) {
+AATexpression AATOffset(offset_ref offset, int size_type) {
   AATexpression retval = (AATexpression) malloc(sizeof(struct AATexpression_));
   retval->kind = AAT_OFFSET;
   retval->size_type = size_type;
-  retval->u.offset = constant;
+  ASN_OFFSET_REF(offset, retval->u.offset)
   return retval;
 }
 AATexpression AATRegister(Register reg, int size_type){

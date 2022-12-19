@@ -10,6 +10,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "hash.h"
+#include "../lib/offset_ref.h"
 #include "../assembly/label.h"
 #include "environment1.h"
 #include "type.h"
@@ -179,10 +180,9 @@ environment Environment() {
 envEntry VarEntry(type typ, int offset) {
   envEntry retval = (envEntry) malloc(sizeof(struct envEntry_));
   /*TODO: MEMORY needs to be FREED*/
-  retval->u.varEntry.offset  = (int*)malloc(sizeof(int));
+  retval->u.varEntry.offset  = new_offset_ref(offset);
   retval->kind = Var_Entry;
   retval->u.varEntry.typ = typ;
-  *retval->u.varEntry.offset = offset;
   return retval;
 }
 

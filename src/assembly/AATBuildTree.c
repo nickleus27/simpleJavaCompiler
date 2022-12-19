@@ -44,7 +44,7 @@ AATexpression ArrayVariable(AATexpression base, AATexpression index, int element
   /* if index == 0 than element size * 0 will == 0; */
 }
 
-AATexpression BaseVariable(int* offset, int size_type){
+AATexpression BaseVariable(offset_ref offset, int size_type){
   return AATMemory( AATOperator(AATRegister( FP(), REG64),AATOffset( offset, REG64 ), AAT_PLUS, REG64), size_type);
 }
 

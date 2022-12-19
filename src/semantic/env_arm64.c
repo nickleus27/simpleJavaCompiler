@@ -25,7 +25,7 @@ struct stack_{
     stack next;
     union{
         struct{
-            int* offset;
+            offset_ref offset;
         }var;
         struct{
             int nextScope;
@@ -48,6 +48,7 @@ struct stack_env_
 
 stack_queue stack_env_get(stack_env env, int index );
 void enter_scope_marker_toQueue( stack_env env, int scope, bool beginScope);
+void free_stack(stack element);
 
 stack_queue new_stack_queue(){
     stack_queue retval = (stack_queue)malloc(sizeof(struct stack_queue_));
@@ -73,10 +74,10 @@ stack_env new_stack_env(int init_size , bool functionStack)
     return env;
 }
 
-void add_new_stack_elem(int* data, stack_queue queue){
+void add_new_stack_elem(offset_ref data, stack_queue queue){
     stack retval = (stack)malloc(sizeof(*retval));
     retval->kind = A64_Var;
-    retval->u.var.offset = data;
+    ASN_OFFSET_REF(data, retval->u.var.offset) // assign offset and increase ref count
     retval->next = NULL;
     if (!queue->first) {
         queue->first = queue->last = retval;
@@ -88,7 +89,7 @@ void add_new_stack_elem(int* data, stack_queue queue){
 }
 
 
-void enter_arm64( stack_env env, int index, int* data ){
+void enter_arm64( stack_env env, int index, offset_ref data ){
     if(env->size <= index){
         if(env->space_left == 0 ){//if array is full
             stack_queue *ptrTemp = NULL;
@@ -231,6 +232,13 @@ void arm64endScope(stack_env env, int scope){
     }
 }
 
+void free_stack(stack element) {
+    if (element->kind == A64_Var) {
+        OFFSET_REF_DEC(element->u.var.offset)
+    }
+    free(element);
+}
+
 /* generate offset to put actual args on stack in caller function
 *   the offset will be + SP after moving stack pointer down totalArgSize*/
 void nextArgElem(stack_env env, stack_queue queue, stack element, int offset_8, int offset_4, int offset_1, int totalArgSize, int savedReg){
@@ -241,30 +249,30 @@ void nextArgElem(stack_env env, stack_queue queue, stack element, int offset_8, 
         {
             /* arg scope will only be 0 */
             queue->first = element->next;
-            switch(*element->u.var.offset){
+            switch(element->u.var.offset->offset){
                 case(PTR):
                 {
                     offset_8 += 8;
-                    *element->u.var.offset =  (totalArgSize - offset_8)+ PTR + savedReg; //updating integer pointer
+                    element->u.var.offset->offset =  (totalArgSize - offset_8)+ PTR + savedReg; //updating integer pointer
                     nextArgElem(env, queue, element->next, offset_8, offset_4, offset_1, totalArgSize, savedReg);
                     offset_8-=8; //remove offset from as leaving the scope
                 }break;
                 case(INT):
                 {
                     offset_4 += 4;
-                    *element->u.var.offset =  (totalArgSize - offset_4)+ INT + savedReg;//offset will always be negative below fp
+                    element->u.var.offset->offset =  (totalArgSize - offset_4)+ INT + savedReg;//offset will always be negative below fp
                     nextArgElem(env, queue, element->next, offset_8, offset_4, offset_1, totalArgSize, savedReg);
                     offset_4-=4;
                 }break;
                 case(BOOL):
                 {
                     offset_1 += 1;
-                    *element->u.var.offset =  (totalArgSize - offset_1)+ BOOL + savedReg; //offset will always be negative below fp
+                    element->u.var.offset->offset =  (totalArgSize - offset_1)+ BOOL + savedReg; //offset will always be negative below fp
                     nextArgElem(env, queue, element->next, offset_8, offset_4, offset_1, totalArgSize, savedReg);
                     offset_1-=1;
                 }break;
             }
-            free(element);
+            free_stack(element);
         }break;
         /*
         case(A64_endScope):
@@ -322,30 +330,30 @@ void nextElem(stack_env env, stack_queue queue, stack element, int offset_8, int
         case(A64_Var):
         {
             queue->first = element->next;
-            switch(*element->u.var.offset){
+            switch(element->u.var.offset->offset){
                 case(PTR):
                 {
                     offset_8 += 8;
-                    *element->u.var.offset =  0-offset_8; //updating integer pointer
+                    element->u.var.offset->offset =  0-offset_8; //updating integer pointer
                     nextElem(env, queue, element->next, offset_8, offset_4, offset_1);
                     offset_8-=8; //remove offset from as leaving the scope
                 }break;
                 case(INT):
                 {
                     offset_4 += 4;
-                    *element->u.var.offset =  0-offset_4;//offset will always be negative below fp
+                    element->u.var.offset->offset =  0-offset_4;//offset will always be negative below fp
                     nextElem(env, queue, element->next, offset_8, offset_4, offset_1);
                     offset_4-=4;
                 }break;
                 case(BOOL):
                 {
                     offset_1 += 1;
-                    *element->u.var.offset =  0-offset_1; //offset will always be negative below fp
+                    element->u.var.offset->offset =  0-offset_1; //offset will always be negative below fp
                     nextElem(env, queue, element->next, offset_8, offset_4, offset_1);
                     offset_1-=1;
                 }break;
             }
-            free(element);
+            free_stack(element);
         }break;
         case (A64_newScope):
         {
@@ -353,12 +361,12 @@ void nextElem(stack_env env, stack_queue queue, stack element, int offset_8, int
             nextElem(env, env->vector[element->u.newScope.nextScope], env->vector[element->u.newScope.nextScope]->first, offset_8, offset_4, offset_1);
             queue->first = element->next;
             nextElem(env, queue, element->next, offset_8, offset_4, offset_1);
-            free(element);
+            free_stack(element);
         }break;
         case(A64_endScope):
         {
             queue->first = element->next;
-            free(element);
+            free_stack(element);
             return;
         }break;
         default:

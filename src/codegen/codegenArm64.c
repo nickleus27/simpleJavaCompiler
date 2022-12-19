@@ -71,7 +71,7 @@ void generateExpression(AATexpression tree){
       generateConstantExp(tree);
       break;
     case AAT_OFFSET:
-      generateConstantExp_offset(tree); //same as constant expression but const is an int* and is only for stack offsets / class offsets
+      generateConstantExp_offset(tree);
       break;
     case AAT_REGISTER:
       generateRegisterExp(tree);
@@ -110,17 +110,17 @@ void generateConstantExp(AATexpression tree){
 void generateConstantExp_offset(AATexpression tree){
   switch(tree->size_type/4){// devide by 4 to minimize space 1/4==0, 4/4==1, 8/4==2
     case SWITCH_BYTE:
-      emit("mov %s, #%d", Acc32(), *tree->u.offset);
+      emit("mov %s, #%d", Acc32(), tree->u.offset->offset);
       emit("str %s, [%s]", Acc32(), AccSP32());//use str (not strb) because placing in 4b (1word) space on stack
       emit("add %s, %s, #%d", AccSP32(), AccSP32(), 0-HALFWORD);
     break;
     case SWITCH_REG32:
-      emit("mov %s, #%d", Acc32(), *tree->u.offset);
+      emit("mov %s, #%d", Acc32(), tree->u.offset->offset);
       emit("str %s, [%s]", Acc32(), AccSP32());
       emit("add %s, %s, #%d", AccSP32(), AccSP32(), 0-HALFWORD);
     break;
     case SWITCH_REG64:
-      emit("mov %s, #%d", Acc64(), *tree->u.offset);
+      emit("mov %s, #%d", Acc64(), tree->u.offset->offset);
       emit("str %s, [%s]", Acc64(), AccSP64());
       emit("add %s, %s, #%d", AccSP64(), AccSP64(), 0-WORD);
     break;

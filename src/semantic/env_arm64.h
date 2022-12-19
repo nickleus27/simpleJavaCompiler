@@ -13,11 +13,13 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include "environment1.h"
+#include "../lib/offset_ref.h"
+
 typedef struct stack_ *stack;
 typedef struct stack_env_ *stack_env;
 
 stack_env new_stack_env(int init_size, bool functionStack );
-void enter_arm64( stack_env env, int index, int* data );
+void enter_arm64( stack_env env, int index, offset_ref data );
 void beginScope_Arm64(stack_env env, int scope);
 void arm64endScope(stack_env env, int scope);
 void free_arm64_env(stack_env env);

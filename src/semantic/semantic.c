@@ -381,9 +381,9 @@ expressionRec analyzeCallExp(environment typeEnv, environment functionEnv, envir
     if (formalList->first != expRec.typ){
       if( noArgs ){
         noArgs = false;
-        first = current = ActualList(expRec.tree, NULL, formalList->first->size_type, *formalList->offset);
+        first = current = ActualList(expRec.tree, NULL, formalList->first->size_type, formalList->offset->offset);
       }else{
-        current->rest = ActualList(expRec.tree, NULL, formalList->first->size_type, *formalList->offset);
+        current->rest = ActualList(expRec.tree, NULL, formalList->first->size_type, formalList->offset->offset);
         current = current->rest;
       }
       switch (formalList->first->kind){
@@ -407,9 +407,9 @@ expressionRec analyzeCallExp(environment typeEnv, environment functionEnv, envir
     }else{
       if( noArgs ){
         noArgs = false;
-        first = current = ActualList(expRec.tree, NULL, formalList->first->size_type, *formalList->offset);
+        first = current = ActualList(expRec.tree, NULL, formalList->first->size_type, formalList->offset->offset);
       }else{
-        current->rest = ActualList(expRec.tree, NULL, formalList->first->size_type, *formalList->offset);
+        current->rest = ActualList(expRec.tree, NULL, formalList->first->size_type, formalList->offset->offset);
         current = current->rest;
       }
     }
@@ -440,9 +440,9 @@ AATexpressionList analyzeCallStm(environment typeEnv, environment functionEnv, e
     if (formalList->first != exp.typ){
       if( noArgs ){
         noArgs = false;
-        first = current = ActualList(exp.tree, NULL, formalList->first->size_type, *formalList->offset);
+        first = current = ActualList(exp.tree, NULL, formalList->first->size_type, formalList->offset->offset);
       }else{
-        current->rest = ActualList(exp.tree, NULL, formalList->first->size_type, *formalList->offset);
+        current->rest = ActualList(exp.tree, NULL, formalList->first->size_type, formalList->offset->offset);
         current = current->rest;
       }
       switch (formalList->first->kind){
@@ -466,9 +466,9 @@ AATexpressionList analyzeCallStm(environment typeEnv, environment functionEnv, e
     }else{
       if( noArgs ){
         noArgs = false;
-        first = current = ActualList(exp.tree, NULL, formalList->first->size_type, *formalList->offset);
+        first = current = ActualList(exp.tree, NULL, formalList->first->size_type, formalList->offset->offset);
       }else{
-        current->rest = ActualList(exp.tree, NULL, formalList->first->size_type, *formalList->offset);
+        current->rest = ActualList(exp.tree, NULL, formalList->first->size_type, formalList->offset->offset);
         current = current->rest;
       }
     }
@@ -749,7 +749,7 @@ expressionRec analyzeVar(environment typeEnv, environment functionEnv, environme
           /* return ExpressionRec(IntegerType(),NULL); */
           return ExpressionRec(NULL, ConstantExpression(0, 0));
         }
-        return ExpressionRec(baseEntry->u.varEntry.typ, ClassVariable(baseType.tree, *baseEntry->u.varEntry.offset, baseEntry->u.varEntry.typ->size_type));
+        return ExpressionRec(baseEntry->u.varEntry.typ, ClassVariable(baseType.tree, baseEntry->u.varEntry.offset->offset, baseEntry->u.varEntry.typ->size_type));
       }else{
         /* return ExpressionRec(IntegerType(),NULL); */
         return ExpressionRec(NULL, ConstantExpression(0, 0));
