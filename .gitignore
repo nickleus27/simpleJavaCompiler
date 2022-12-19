@@ -2,6 +2,7 @@
 **/*.o
 **/*.out
 **/*.s
+**/__Pycache__
 build/sjc
 **/.DS_Store
 src/build/lex.yy.h
