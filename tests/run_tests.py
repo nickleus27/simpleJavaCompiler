@@ -18,19 +18,15 @@ class Test_sJava_Files(unittest.TestCase):
         test_txt = path.join(self.dir, "test0.txt")
         exitStatus = run([self.sjc_exe, test0]).returncode
         self.assertEqual(exitStatus, 0)
-        if path.isfile(sjout):
-            with open(test_txt, "w") as outfile:
+        if path.isfile(sjout):  
+            with open(tmp0, 'w') as outfile:
                 run(path.join(self.exe, sjout), stdout=outfile)
                 outfile.close()
-            '''   
-            with open(path.join(self.dir, "temp0.txt"), 'w') as outfile:
-                run(path.join(self.exe, "test0.sjava.out"), stdout=outfile)
-                outfile.close()
-        if path.isfile(path.join(self.dir, "temp0.txt")):
-            self.assertTrue(filecmp(path.join(self.dir, "temp0.txt"), path.join(self.dir, "test0.txt")))
+        if path.isfile(tmp0):
+            self.assertTrue(filecmp.cmp(tmp0, test_txt))
+            remove(tmp0)
         else:
             self.assertTrue(False)
-            '''
         if path.isfile(sjo):
             remove(sjo)
         if path.isfile(sjout):
@@ -48,9 +44,14 @@ class Test_sJava_Files(unittest.TestCase):
         exitStatus = run([self.sjc_exe, test1]).returncode
         self.assertEqual(exitStatus, 0)
         if path.isfile(sjout):
-            with open(test_txt, "w") as outfile:
+            with open(tmp1, 'w') as outfile:
                 run(path.join(self.exe, sjout), stdout=outfile)
                 outfile.close()
+        if path.isfile(tmp1):
+            self.assertTrue(filecmp.cmp(tmp1, test_txt))
+            remove(tmp1)
+        else:
+            self.assertTrue(False)
         if path.isfile(sjo):
             remove(sjo)
         if path.isfile(sjout):
@@ -68,9 +69,14 @@ class Test_sJava_Files(unittest.TestCase):
         exitStatus = run([self.sjc_exe, test2]).returncode
         self.assertEqual(exitStatus, 0)
         if path.isfile(sjout):
-            with open(test_txt, "w") as outfile:
+            with open(tmp2, 'w') as outfile:
                 run(path.join(self.exe, sjout), stdout=outfile)
                 outfile.close()
+        if path.isfile(tmp2):
+            self.assertTrue(filecmp.cmp(tmp2, test_txt))
+            remove(tmp2)
+        else:
+            self.assertTrue(False)
         if path.isfile(sjo):
             remove(sjo)
         if path.isfile(sjout):
@@ -88,9 +94,14 @@ class Test_sJava_Files(unittest.TestCase):
         exitStatus = run([self.sjc_exe, test2_1]).returncode
         self.assertEqual(exitStatus, 0)
         if path.isfile(sjout):
-            with open(test_txt, "w") as outfile:
+            with open(tmp2_1, 'w') as outfile:
                 run(path.join(self.exe, sjout), stdout=outfile)
                 outfile.close()
+        if path.isfile(tmp2_1):
+            self.assertTrue(filecmp.cmp(tmp2_1, test_txt))
+            remove(tmp2_1)
+        else:
+            self.assertTrue(False)
         if path.isfile(sjo):
             remove(sjo)
         if path.isfile(sjout):
@@ -108,9 +119,14 @@ class Test_sJava_Files(unittest.TestCase):
         exitStatus = run([self.sjc_exe, test3]).returncode
         self.assertEqual(exitStatus, 0)
         if path.isfile(sjout):
-            with open(test_txt, "w") as outfile:
+            with open(tmp3, 'w') as outfile:
                 run(path.join(self.exe, sjout), stdout=outfile)
                 outfile.close()
+        if path.isfile(tmp3):
+            self.assertTrue(filecmp.cmp(tmp3, test_txt))
+            remove(tmp3)
+        else:
+            self.assertTrue(False)
         if path.isfile(sjo):
             remove(sjo)
         if path.isfile(sjout):
@@ -128,9 +144,14 @@ class Test_sJava_Files(unittest.TestCase):
         exitStatus = run([self.sjc_exe, test4]).returncode
         self.assertEqual(exitStatus, 0)
         if path.isfile(sjout):
-            with open(test_txt, "w") as outfile:
+            with open(tmp4, 'w') as outfile:
                 run(path.join(self.exe, sjout), stdout=outfile)
                 outfile.close()
+        if path.isfile(tmp4):
+            self.assertTrue(filecmp.cmp(tmp4, test_txt))
+            remove(tmp4)
+        else:
+            self.assertTrue(False)
         if path.isfile(sjo):
             remove(sjo)
         if path.isfile(sjout):
@@ -148,9 +169,14 @@ class Test_sJava_Files(unittest.TestCase):
         exitStatus = run([self.sjc_exe, test4_1]).returncode
         self.assertEqual(exitStatus, 0)
         if path.isfile(sjout):
-            with open(test_txt, "w") as outfile:
+            with open(tmp4_1, 'w') as outfile:
                 run(path.join(self.exe, sjout), stdout=outfile)
                 outfile.close()
+        if path.isfile(tmp4_1):
+            self.assertTrue(filecmp.cmp(tmp4_1, test_txt))
+            remove(tmp4_1)
+        else:
+            self.assertTrue(False)
         if path.isfile(sjo):
             remove(sjo)
         if path.isfile(sjout):
@@ -168,9 +194,14 @@ class Test_sJava_Files(unittest.TestCase):
         exitStatus = run([self.sjc_exe, test5]).returncode
         self.assertEqual(exitStatus, 0)
         if path.isfile(sjout):
-            with open(test_txt, "w") as outfile:
+            with open(tmp5, 'w') as outfile:
                 run(path.join(self.exe, sjout), stdout=outfile)
                 outfile.close()
+        if path.isfile(tmp5):
+            self.assertTrue(filecmp.cmp(tmp5, test_txt))
+            remove(tmp5)
+        else:
+            self.assertTrue(False)
         if path.isfile(sjo):
             remove(sjo)
         if path.isfile(sjout):
@@ -189,9 +220,14 @@ class Test_sJava_Files(unittest.TestCase):
             exitStatus = run([self.sjc_exe, test6]).returncode
             self.assertEqual(exitStatus, 0)
             if path.isfile(sjout):
-                with open(test_txt, "w") as outfile:
+                with open(tmp6, 'w') as outfile:
                     run(path.join(self.exe, sjout), stdout=outfile)
                     outfile.close()
+            if path.isfile(tmp6):
+                self.assertTrue(filecmp.cmp(tmp6, test_txt))
+                remove(tmp6)
+            else:
+                self.assertTrue(False)
             if path.isfile(sjo):
                 remove(sjo)
             if path.isfile(sjout):
@@ -209,9 +245,14 @@ class Test_sJava_Files(unittest.TestCase):
         exitStatus = run([self.sjc_exe, test7]).returncode
         self.assertEqual(exitStatus, 0)
         if path.isfile(sjout):
-            with open(test_txt, "w") as outfile:
+            with open(tmp7, 'w') as outfile:
                 run(path.join(self.exe, sjout), stdout=outfile)
                 outfile.close()
+        if path.isfile(tmp7):
+            self.assertTrue(filecmp.cmp(tmp7, test_txt))
+            remove(tmp7)
+        else:
+            self.assertTrue(False)
         if path.isfile(sjo):
             remove(sjo)
         if path.isfile(sjout):
@@ -230,9 +271,14 @@ class Test_sJava_Files(unittest.TestCase):
             exitStatus = run([self.sjc_exe, test8]).returncode
             self.assertEqual(exitStatus, 0)
             if path.isfile(sjout):
-                with open(test_txt, "w") as outfile:
+                with open(tmp8, 'w') as outfile:
                     run(path.join(self.exe, sjout), stdout=outfile)
                     outfile.close()
+            if path.isfile(tmp8):
+                self.assertTrue(filecmp.cmp(tmp8, test_txt))
+                remove(tmp8)
+            else:
+                self.assertTrue(False)
             if path.isfile(sjo):
                 remove(sjo)
             if path.isfile(sjout):
