@@ -3,8 +3,8 @@
  * File finished by Nick Anderson
  * nickleus27@gmail.com
  * 10/18/2022
- * 
-*/
+ *
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,21 +22,26 @@
 extern int yyparse(void);
 extern FILE *yyin;
 
-ASTprogram parse(char *filename) {
-  yyin = fopen(filename,"r");
-  if (yyin == NULL) {
-    fprintf(stderr,"Cannot open file:%s\n",filename);
+ASTprogram parse(char *filename)
+{
+  yyin = fopen(filename, "r");
+  if (yyin == NULL)
+  {
+    fprintf(stderr, "Cannot open file:%s\n", filename);
   }
-  if  (yyin != NULL && yyparse() == 0)  { /* parsing worked */
+  if (yyin != NULL && yyparse() == 0)
+  { /* parsing worked */
     return ASTroot;
-  } else { 
-    fprintf(stderr,"Parsing failed\n");
+  }
+  else
+  {
+    fprintf(stderr, "Parsing failed\n");
     return NULL;
   }
 }
 
-
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
   FILE *output;
   char *outfilename;
   int asCmdStrSize = 12;
@@ -47,54 +52,53 @@ int main(int argc, char **argv) {
   const char *ld = "ld -o ";
   const char *ldPost = " -lSystem -syslibroot `xcrun -sdk macosx --show-sdk-path` -e _start -arch arm64";
 
-  
   ASTprogram program;
   AATstatement assem;
-  if (argc!=2) {
-    fprintf(stderr,"usage: %s filename\n",argv[0]); 
+  if (argc != 2)
+  {
+    fprintf(stderr, "usage: %s filename\n", argv[0]);
     exit(1);
   }
-  outfilename = (char *) malloc((strlen(argv[1]) + 3) * sizeof(char));
-  strcpy(outfilename,argv[1]);
-  strcat(outfilename,".s");
+  outfilename = (char *)malloc((strlen(argv[1]) + 3) * sizeof(char));
+  strcpy(outfilename, argv[1]);
+  strcat(outfilename, ".s");
   nameSize = strlen(argv[1]);
-  
+
   program = parse(argv[1]);
-  if (program != NULL) {
+  if (program != NULL)
+  {
     printf("Abstract Syntax Tree\n");
     printf("--------------------\n");
     printAST(program);
     assem = analyzeProgram(program);
-    if (!anyErrors()) {
+    if (!anyErrors())
+    {
       printf("\nAbstract Assembly Tree\n");
       printf("----------------------\n");
       printAAT(assem);
       output = fopen(outfilename, "w");
       generateCode(assem, output);
-      char asCmd[nameSize*2+asCmdStrSize+1];
+      fflush(output);
+      char asCmd[nameSize * 2 + asCmdStrSize + 1];
       strcpy(asCmd, as);
       strcat(asCmd, argv[1]);
       strcat(asCmd, ".o ");
       strcat(asCmd, outfilename);
-      printf("%s\n", asCmd);
-      //if(system(asCmd)==0){
-        char ldCmd[nameSize*2+ldCmdStrSize+1];
-        strcpy(ldCmd, ld);
-        strcat(ldCmd, argv[1]);
-        strcat(ldCmd, exe);
-        strcat(ldCmd, argv[1]);
-        strcat(ldCmd, ".o");
-        strcat(ldCmd, ldPost);
-        printf("%s\n", ldCmd);
-      //  system(ldCmd);
-      //}else{
-      //  printf("Cmd as -o was not successful");
-      //}
-    } else {
-      printf("# of errors = %d",numErrors());
+      system(asCmd);
+      char ldCmd[nameSize * 2 + ldCmdStrSize + 1];
+      strcpy(ldCmd, ld);
+      strcat(ldCmd, argv[1]);
+      strcat(ldCmd, exe);
+      strcat(ldCmd, argv[1]);
+      strcat(ldCmd, ".o");
+      strcat(ldCmd, ldPost);
+      system(ldCmd);
     }
- }
- 
- return 0;
-}
+    else
+    {
+      printf("# of errors = %d", numErrors());
+    }
+  }
 
+  return 0;
+}

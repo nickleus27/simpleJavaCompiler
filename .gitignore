@@ -1,7 +1,10 @@
+.vscode/
 **/*.dSYM
 **/*.o
 **/*.out
 **/*.s
+**/__Pycache__
+**/temp*
 build/sjc
 **/.DS_Store
 src/build/lex.yy.h

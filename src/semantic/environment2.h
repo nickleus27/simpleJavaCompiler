@@ -18,7 +18,7 @@ struct envEntry_ {
     struct {
       type typ;
       int scope;
-      int* offset; /* TODO: need to make this int * for adjusting offset form ARM64 */
+      offset_ref offset; /* TODO: need to make this int * for adjusting offset form ARM64 */
     } varEntry;
     struct {
       int argMemSize;

@@ -5,6 +5,7 @@
  * 10/18/2022
  * 
 */
+#include "../lib/offset_ref.h"
 
 typedef struct AATexpression_ *AATexpression;
 typedef struct AATstatement_ *AATstatement;
@@ -31,7 +32,7 @@ AATstatement ReturnStatement(AATexpression value, Label functionend, int size_ty
 
 /*expressions*/
 AATexpression Allocate(AATexpression size);
-AATexpression BaseVariable(int* offset, int size_type);
+AATexpression BaseVariable(offset_ref offset, int size_type);
 AATexpression ArrayVariable(AATexpression base, AATexpression index, int elementSize, int size_type);
 AATexpression ClassVariable(AATexpression base, int offset, int size_type);
 AATexpression ConstantExpression(int value, int size_type);

@@ -5,6 +5,7 @@
  * 10/18/2022
  * 
 */
+#include "../lib/offset_ref.h"
 
 typedef struct type_ *type;
 typedef struct typeList_ *typeList;
@@ -22,7 +23,7 @@ struct type_ {
 };
 
 struct typeList_ {
-  int* offset;
+  offset_ref offset;
   type first;
   typeList rest;
 };

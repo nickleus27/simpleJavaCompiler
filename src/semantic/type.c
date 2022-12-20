@@ -11,6 +11,7 @@
 #include "environment1.h"
 #include "type.h"
 #include "../codegen/MachineDependent.h"
+
 type integertypeINST = NULL;
 type booleantypeINST = NULL;
 type voidtypeINST = NULL;
@@ -59,9 +60,8 @@ type ArrayType(type basetype) {
   
 typeList TypeList(type first, typeList rest, int offset) {
   typeList retval = (typeList) malloc(sizeof(struct typeList_));
-  retval->offset = (int*) malloc(sizeof(int));
+  retval->offset = new_offset_ref(offset);
   retval->first = first;
   retval->rest = rest;
-  *retval->offset = offset;
   return retval;
 }
