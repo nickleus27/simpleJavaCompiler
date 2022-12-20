@@ -2,12 +2,20 @@ import unittest
 from subprocess import run
 from os import remove
 from os import path
+from os import system
 import filecmp
 
 class Test_sJava_Files(unittest.TestCase):
     sjc_exe = "src/build/./sjc"
     exe = "."
     dir = "tests"
+    
+    def __init__(self, *args, **kwargs):
+        super(Test_sJava_Files, self).__init__(*args, **kwargs)
+        src = "src"
+        build = "build"
+        buildPath = path.join(src, build)
+        system("(cd " + buildPath + " && make)")
 
     def test_test0(self):
         test0 = path.join(self.dir, "test0.sjava")
@@ -285,6 +293,11 @@ class Test_sJava_Files(unittest.TestCase):
                 remove(sjout)
             if path.isfile(sjs):
                 remove(sjs)
+    def __del__(self):
+        src = "src"
+        build = "build"
+        buildPath = path.join(src, build)
+        system("(cd " + buildPath + " && make clean)")
 
 if __name__ == '__main__':
     unittest.main()
