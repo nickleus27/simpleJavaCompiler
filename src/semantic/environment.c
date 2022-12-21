@@ -45,6 +45,7 @@ char *Marker();
 /* Static variables */
 
 char *stackmarker = NULL;
+//This global env_sizes is used to keep track of memory used in different scopes of a function
 env_sizes memTotals = NULL;
 
 /* Function Definitions */

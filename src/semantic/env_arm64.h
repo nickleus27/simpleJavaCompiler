@@ -30,5 +30,6 @@ void addMemSizes(stack_env env, env_sizes mem);//, env_sizes block);
 int generateStackMemory(stack_env env);
 int pushArgsOnStack(stack_env env, env_sizes mem_sizes);
 void generateArgStackMemory(stack_env env, int totalArgSize);
+void generateClassMemory(stack_env env, env_sizes mem_sizes);
 
 #endif /* int_vector_h */

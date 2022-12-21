@@ -1,7 +1,9 @@
 class test{
-    int t;
+    int instance;
 }
 
 void main(){
     test t = new test();
+    t.instance = 1;
+    printInt(t.instance);
 }

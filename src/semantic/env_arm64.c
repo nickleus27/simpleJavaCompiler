@@ -274,18 +274,57 @@ void nextArgElem(stack_env env, stack_queue queue, stack element, int offset_8, 
             }
             free_stack(element);
         }break;
-        /*
-        case(A64_endScope):
-        {
-            stack next = env->vector[element->u.endScope.nextScope];
-            env->vector[0] = env->vector[0]->u.endScope.rest;
-            nextElem(env, element->u.endScope.nextScope, next, offset_8, offset_4, offset_1);
-            free(element);
-        }break;
-        */
         default: break;
     }
+}
 
+void nextInstanceElem(stack_env env, stack_queue queue, stack element, int offset_8, int offset_4, int offset_1) {
+    if (! element ) return;
+    /*add element to appropriate bucket 8,4,1 */
+    switch(element->kind){
+        case(A64_Var):
+        {
+            queue->first = element->next;
+            switch(element->u.var.offset->offset){
+                case(PTR):
+                {
+                    offset_8 += 8;
+                    element->u.var.offset->offset =  0-offset_8; //updating integer pointer
+                    nextInstanceElem(env, queue, element->next, offset_8, offset_4, offset_1);
+                    offset_8-=8; //remove offset from as leaving the scope
+                }break;
+                case(INT):
+                {
+                    offset_4 += 4;
+                    element->u.var.offset->offset =  0-offset_4;//offset will always be negative below fp
+                    nextInstanceElem(env, queue, element->next, offset_8, offset_4, offset_1);
+                    offset_4-=4;
+                }break;
+                case(BOOL):
+                {
+                    offset_1 += 1;
+                    element->u.var.offset->offset =  0-offset_1; //offset will always be negative below fp
+                    nextInstanceElem(env, queue, element->next, offset_8, offset_4, offset_1);
+                    offset_1-=1;
+                }break;
+            }
+            free_stack(element);
+        }
+        default: break;
+    }
+}
+
+void generateClassMemory(stack_env env, env_sizes mem_sizes) {
+    int totalArgSize = mem_sizes->size_1 + mem_sizes->size_4 + mem_sizes->size_8;
+    while(totalArgSize%8) totalArgSize++; //needs to have alignment on 8 bytes guaranteed in heap
+    int offset_8 = 0,
+    offset_4 = mem_sizes->size_8,
+    offset_1 = offset_4 + mem_sizes->size_4;
+    //while(env->vector[0])//args are stored in scope0
+    if ( env->vector[0] ) {
+        nextInstanceElem(env, env->vector[0], env->vector[0]->first, offset_8, offset_4, offset_1);
+    }
+    free(mem_sizes);
 }
 
 /* generates offsets for actual args in caller function

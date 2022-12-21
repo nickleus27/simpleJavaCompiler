@@ -45,6 +45,7 @@ int blockScopeFlag = END_BLOCK_SCOPE;
 envEntry GLOBfunctPtr = NULL;
 stack_env functionStack = NULL;
 stack_env argStack = NULL;
+stack_env classStack = NULL;
 
 /* does ExpressionRec need to return a pointer??? */
 expressionRec ExpressionRec(type typ, AATexpression tree);
@@ -97,6 +98,7 @@ AATstatement analyzeProgram(ASTprogram program) {
   initMemTrackers();
   functionStack = new_stack_env(8, true);
   argStack = new_stack_env(1, false);//only need 1 scope
+  classStack = new_stack_env(1, false);
 
   /* analyze classes */
   visitClassList(typeEnv, functionEnv, varEnv, program->classes);
@@ -110,6 +112,7 @@ AATstatement analyzeProgram(ASTprogram program) {
    */
   free_arm64_env(functionStack);
   free_arm64_env(argStack);
+  free_arm64_env(classStack);
   return AATpop();
 }
 AATstatement visitFunctionList(environment typeEnv, environment functionEnv, environment varEnv, ASTfunctionDecList function){
@@ -219,17 +222,16 @@ void analyzeInstanceVarDecList(environment typeEnv, environment classVarEnv, env
       /* check for array type and enter into type env */
       varType = enterArrayTypesClass(typeEnv, varType, varList->first);
     } /* enter variable here */
-      enter( classVarEnv, varList->first->name, VarEntry( varType->u.typeEntry.typ, varType->u.typeEntry.typ->size_type ) );
+    enter( classVarEnv, varList->first->name, VarEntry( varType->u.typeEntry.typ, varType->u.typeEntry.typ->size_type ) );
+    envEntry insVar = find(classVarEnv, varList->first->name);
+    enter_arm64(classStack, 0 /*scope is always 0 for class memory*/, insVar->u.varEntry.offset);
   }
-  /**
-   * TODO: enter instance vars into arm64 env for stack offset arrangement
-   * 
-   */
 }
 /*Todo: make recursive function for instanceVarList */
 void analyzeClass(environment typeEnv, environment functionEnv, environment varEnv, ASTclass class){
   environment classVarEnv = Environment();
   analyzeInstanceVarDecList(typeEnv, classVarEnv, varEnv, class->instancevars);
+  generateClassMemory(classStack, getEnvMemTotals(classVarEnv));
   enter( typeEnv, class->name, TypeEntry( ClassType( classVarEnv ) ) );
 }
 
@@ -329,14 +331,15 @@ AATstatement analyzeFunction(environment typeEnv, environment functionEnv, envir
       }
       typeList formalList = funType->u.functionEntry.formals;
       visitFormals( typeEnv, varEnv, formalList, function, function->u.functionDef.formals );
+
       /* arrange offsets for pushing functions args on stack (offset from SP after moving it down size of args)*/
       totalArgSize = pushArgsOnStack(argStack, getEnvMemTotals(varEnv));
       setArgMemSize(funType, totalArgSize);
+
       /* arrange offsets for access to argument variables from function (offset from FP)*/
       addMemSizes(functionStack, getEnvMemTotals(varEnv));
       generateArgStackMemory(functionStack, totalArgSize);
-      /* reset mem totals for local vars*/
-      //resetMemTotals();
+
       beginScope(varEnv);
       RETURN_FLAG = NO_RETURN_TYPE;
       GLOBfunctPtr = NULL;
@@ -347,10 +350,12 @@ AATstatement analyzeFunction(environment typeEnv, environment functionEnv, envir
       //GLOBfunctPtr = NULL;
       //RETURN_FLAG = NO_RETURN_TYPE;
       //offset = 0;
+
+      /*reset arm64 env for next stack frame*/
       arm64endScope( functionStack , endScope(varEnv));
       addMemSizes(functionStack, getMemTotals());
-      //endScope(varEnv); //does this need to called again? it is a called above fore arm64endScope argument
       resetMemTotals();//need to call this at the end of analyzing stack memory
+
       AATseqStmCleanUp( stmPtr );
       return functionDefinition(AATpop(), generateStackMemory(functionStack), GLOBfunctPtr->u.functionEntry.startLabel, GLOBfunctPtr->u.functionEntry.endLabel);
     }
