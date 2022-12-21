@@ -230,9 +230,9 @@ void analyzeInstanceVarDecList(environment typeEnv, environment classVarEnv, env
 /*Todo: make recursive function for instanceVarList */
 void analyzeClass(environment typeEnv, environment functionEnv, environment varEnv, ASTclass class){
   environment classVarEnv = Environment();
+  enter( typeEnv, class->name, TypeEntry( ClassType( classVarEnv ) ) );
   analyzeInstanceVarDecList(typeEnv, classVarEnv, varEnv, class->instancevars);
   generateClassMemory(classStack, getEnvMemTotals(classVarEnv));
-  enter( typeEnv, class->name, TypeEntry( ClassType( classVarEnv ) ) );
 }
 
 envEntry analyzeFormal(environment typeEnv, environment functionEnv, environment varEnv, ASTformal formal){
@@ -816,6 +816,11 @@ expressionRec analyzeOpExpression(environment typeEnv, environment functionEnv, 
       return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_EQ,INT));
     if (LHS.typ == BooleanType() && RHS.typ == BooleanType()) 
       return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_EQ,BOOL));
+    /*
+    if (LHS.tree = RHS.typ) {
+      return ExpressionRec(BooleanType(), OperatorExpression(LHS.tree, RHS.tree, AAT_EQ, PTR));
+    }
+    */
     Error(exp->line," Both arguments to == must be the same type");
       return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_EQ,0));
     } 

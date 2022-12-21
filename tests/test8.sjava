@@ -1,9 +1,16 @@
 class test{
-    int instance;
+    int data;
+    test next;
 }
 
 void main(){
     test t = new test();
-    t.instance = 1;
-    printInt(t.instance);
+    t.data = 1;
+    test t2 = new test();
+    t2.data = 2;
+    t.next = t2;
+    test temp = t;
+    printInt(temp.data);
+    temp = temp.next;
+    printInt(temp.data);
 }

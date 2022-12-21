@@ -258,22 +258,28 @@ void generateOpExp64(AATexpression tree){
       emit("sdiv %s, %s, %s", Acc64(), Acc64(), Tmp0_64());
       break;
     case AAT_LT:
-      
+      emit("cmp %s, %s", Tmp0_64(), Tmp1_64());
+      emit("cset %s, lt", Acc64());
       break;
     case AAT_GT:
-
+      emit("cmp %s, %s", Tmp0_64(), Tmp1_64());
+      emit("cset %s, gt", Acc64());
       break;
     case AAT_LEQ:
-
+      emit("cmp %s, %s", Tmp0_64(), Tmp1_64());
+      emit("cset %s, le", Acc64());
       break;
     case AAT_GEQ:
-
+      emit("cmp %s, %s", Tmp0_64(), Tmp1_64());
+      emit("cset %s, ge", Acc64());
       break;
     case AAT_EQ:
-
+      emit("cmp %s, %s", Tmp0_64(), Tmp1_64());
+      emit("cset %s, eq", Acc64());
       break;
     case AAT_NEQ:
-
+      emit("cmp %s, %s", Tmp0_64(), Tmp1_64());
+      emit("cset %s, ne", Acc64());
       break;
     case AAT_AND:
 
