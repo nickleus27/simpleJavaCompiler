@@ -808,31 +808,36 @@ expressionRec analyzeOpExpression(environment typeEnv, environment functionEnv, 
     return ExpressionRec(IntegerType(),OperatorExpression(LHS.tree,RHS.tree,AAT_DIVIDE,INT));
     } 
     break;
-  case AST_EQ: /* add pointer equality checking */
+  case AST_EQ: /* can this be condensed to one if statement? */
     {
     expressionRec LHS = analyzeExpression(typeEnv,functionEnv,varEnv,exp->u.opExp.left);
     expressionRec RHS = analyzeExpression(typeEnv,functionEnv,varEnv,exp->u.opExp.right);
-    if (LHS.typ == IntegerType() && RHS.typ == IntegerType()) 
+    if (LHS.typ == IntegerType() && RHS.typ == IntegerType()) {
       return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_EQ,INT));
-    if (LHS.typ == BooleanType() && RHS.typ == BooleanType()) 
+    }
+    if (LHS.typ == BooleanType() && RHS.typ == BooleanType()) {
       return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_EQ,BOOL));
-    /*
-    if (LHS.tree = RHS.typ) {
+    }
+    if (LHS.typ == RHS.typ) {
       return ExpressionRec(BooleanType(), OperatorExpression(LHS.tree, RHS.tree, AAT_EQ, PTR));
     }
-    */
     Error(exp->line," Both arguments to == must be the same type");
       return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_EQ,0));
     } 
     break;
-  case AST_NEQ: /* add checking for char type and pointer type */
+  case AST_NEQ: /* can this be condensed to one if statement? */
     {
     expressionRec LHS = analyzeExpression(typeEnv,functionEnv,varEnv,exp->u.opExp.left);
     expressionRec RHS = analyzeExpression(typeEnv,functionEnv,varEnv,exp->u.opExp.right);
-    if (LHS.typ == IntegerType() && RHS.typ == IntegerType()) 
+    if (LHS.typ == IntegerType() && RHS.typ == IntegerType()) {
       return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_NEQ,INT));
-    if (LHS.typ == BooleanType() && RHS.typ == BooleanType()) 
+    }
+    if (LHS.typ == BooleanType() && RHS.typ == BooleanType()) {
       return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_NEQ,BOOL));
+    }
+    if (LHS.typ == RHS.typ) {
+      return ExpressionRec(BooleanType(), OperatorExpression(LHS.tree, RHS.tree, AAT_EQ, PTR));
+    }
     Error(exp->line," Both arguments to == must be the same type");
     return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_NEQ,0));
     break;

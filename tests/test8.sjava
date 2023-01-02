@@ -13,4 +13,7 @@ void main(){
     printInt(temp.data);
     temp = temp.next;
     printInt(temp.data);
+    if(t == t2) {
+        ;
+    }
 }
