@@ -220,6 +220,14 @@ ASTexpression ASTBoolLiteralExp(int line, int value) {
   return retval;
 }
 
+ASTexpression ASTNullExp(int line) {
+  ASTexpression retval = (ASTexpression) malloc(sizeof(struct ASTexpression_));
+  retval->line = line;
+  retval->kind = NullExp;
+  retval->u.nullExp.zero = 0;
+  return retval;
+}
+
 ASTexpression ASTOpExp(int line, ASToperator operator, ASTexpression left,
 			ASTexpression right) {
   ASTexpression retval = (ASTexpression) malloc(sizeof(struct ASTexpression_));

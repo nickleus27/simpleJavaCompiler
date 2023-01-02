@@ -111,6 +111,10 @@ void printExpression(int indent, ASTexpression exp) {
     printIndent(indent,exp->line);
     printf("INTEGER LITERAL: %d\n",exp->u.intLiteralExp.value);
     break;
+  case NullExp:
+    printIndent(indent,exp->line);
+    printf("NULL\n");
+    break;
   case BoolLiteralExp:
     printIndent(indent,exp->line);
     printf("BOOLEAN LITERAL: ");

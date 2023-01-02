@@ -4,16 +4,15 @@ class test{
 }
 
 void main(){
-    test t = new test();
-    t.data = 1;
-    test t2 = new test();
-    t2.data = 2;
-    t.next = t2;
-    test temp = t;
-    printInt(temp.data);
-    temp = temp.next;
-    printInt(temp.data);
-    if(t == t2) {
-        ;
+    test test0 = new test();
+    test0.data = 499;
+    test0.next = null;
+    test test1 = new test();
+    test1.data = 500;
+    test1.next = test0;
+    test temp = test1;
+    while(temp != null) {
+        printInt(temp.data);
+        temp = temp.next;
     }
 }

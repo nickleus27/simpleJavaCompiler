@@ -15,7 +15,7 @@
 type integertypeINST = NULL;
 type booleantypeINST = NULL;
 type voidtypeINST = NULL;
-
+type nulltypeINST = NULL;
 
 type IntegerType() {
   if (integertypeINST == NULL) {
@@ -33,6 +33,15 @@ type BooleanType() {
     booleantypeINST->size_type = BOOL;
   }
   return booleantypeINST;
+}
+
+type NullType() {
+  if (nulltypeINST == NULL) {
+    nulltypeINST = (type) malloc(sizeof(struct type_));
+    nulltypeINST->kind = null_type;
+    booleantypeINST->size_type = PTR;
+  }
+  return nulltypeINST;
 }
 
 type VoidType() {

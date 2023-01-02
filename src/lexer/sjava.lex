@@ -81,6 +81,7 @@ class             { ASSIGN_LINENO; return CLASS; }
 new               { ASSIGN_LINENO; return NEW; }
 return            { ASSIGN_LINENO; return RETURN; }
 glob              { ASSIGN_LINENO; return GLOB; }
+null              { ASSIGN_LINENO; return TOKENNULL; }
 
   /* todo(Char): add functionality for chars and strings */
 

@@ -44,7 +44,8 @@
 #define RETURN 293
 #define NEW 294
 #define GLOB 295
-#define ERROR 296
+#define TOKENNULL 296
+#define ERROR 297
 /* todo(Char): add token for CHAR & STRING */
 
 typedef union { 

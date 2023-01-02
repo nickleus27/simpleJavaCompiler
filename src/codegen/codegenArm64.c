@@ -258,29 +258,77 @@ void generateOpExp64(AATexpression tree){
       emit("sdiv %s, %s, %s", Acc64(), Acc64(), Tmp0_64());
       break;
     case AAT_LT:
-      emit("cmp %s, %s", Tmp0_64(), Tmp1_64());
+      emit("cmp %s, %s", Acc64(), Tmp0_64());
       emit("cset %s, lt", Acc64());
-      break;
+      if (tree->u.operator.left->size_type == REG32 || tree->u.operator.right->size_type == REG32) {
+        emit("str %s, [%s, #%d]", Acc32(), AccSP32(), HALFWORD); //str lower 32bits of Acc64()
+        emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD);
+      } else {
+        emit("str %s, [%s]", Acc32(), AccSP32()); //str lower 32bits of Acc64()
+        emit("add %s, %s, #%d", AccSP32(), AccSP32(), 0 - HALFWORD);
+        emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD * 2);
+      }
+      return;
     case AAT_GT:
-      emit("cmp %s, %s", Tmp0_64(), Tmp1_64());
+      emit("cmp %s, %s", Acc64(), Tmp0_64());
       emit("cset %s, gt", Acc64());
-      break;
+      if (tree->u.operator.left->size_type == REG32 || tree->u.operator.right->size_type == REG32) {
+        emit("str %s, [%s, #%d]", Acc32(), AccSP32(), HALFWORD); //str lower 32bits of Acc64()
+        emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD);
+      } else {
+        emit("str %s, [%s]", Acc32(), AccSP32()); //str lower 32bits of Acc64()
+        emit("add %s, %s, #%d", AccSP32(), AccSP32(), 0 - HALFWORD);
+        emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD * 2);
+      }
+      return;
     case AAT_LEQ:
-      emit("cmp %s, %s", Tmp0_64(), Tmp1_64());
+      emit("cmp %s, %s", Acc64(), Tmp0_64());
       emit("cset %s, le", Acc64());
-      break;
+      if (tree->u.operator.left->size_type == REG32 || tree->u.operator.right->size_type == REG32) {
+        emit("str %s, [%s, #%d]", Acc32(), AccSP32(), HALFWORD); //str lower 32bits of Acc64()
+        emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD);
+      } else {
+        emit("str %s, [%s]", Acc32(), AccSP32()); //str lower 32bits of Acc64()
+        emit("add %s, %s, #%d", AccSP32(), AccSP32(), 0 - HALFWORD);
+        emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD * 2);
+      }
+      return;;
     case AAT_GEQ:
-      emit("cmp %s, %s", Tmp0_64(), Tmp1_64());
+      emit("cmp %s, %s", Acc64(), Tmp0_64());
       emit("cset %s, ge", Acc64());
-      break;
+      if (tree->u.operator.left->size_type == REG32 || tree->u.operator.right->size_type == REG32) {
+        emit("str %s, [%s, #%d]", Acc32(), AccSP32(), HALFWORD); //str lower 32bits of Acc64()
+        emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD);
+      } else {
+        emit("str %s, [%s]", Acc32(), AccSP32()); //str lower 32bits of Acc64()
+        emit("add %s, %s, #%d", AccSP32(), AccSP32(), 0 - HALFWORD);
+        emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD * 2);
+      }
+      return;
     case AAT_EQ:
-      emit("cmp %s, %s", Tmp0_64(), Tmp1_64());
+      emit("cmp %s, %s", Acc64(), Tmp0_64());
       emit("cset %s, eq", Acc64());
-      break;
+      if (tree->u.operator.left->size_type == REG32 || tree->u.operator.right->size_type == REG32) {
+        emit("str %s, [%s, #%d]", Acc32(), AccSP32(), HALFWORD); //str lower 32bits of Acc64()
+        emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD);
+      } else {
+        emit("str %s, [%s]", Acc32(), AccSP32()); //str lower 32bits of Acc64()
+        emit("add %s, %s, #%d", AccSP32(), AccSP32(), 0 - HALFWORD);
+        emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD * 2);
+      }
+      return;
     case AAT_NEQ:
-      emit("cmp %s, %s", Tmp0_64(), Tmp1_64());
+      emit("cmp %s, %s", Acc64(), Tmp0_64());
       emit("cset %s, ne", Acc64());
-      break;
+      if (tree->u.operator.left->size_type == REG32 || tree->u.operator.right->size_type == REG32) {
+        emit("str %s, [%s, #%d]", Acc32(), AccSP32(), HALFWORD); //str lower 32bits of Acc64()
+        emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD);
+      } else {
+        emit("str %s, [%s]", Acc32(), AccSP32()); //str lower 32bits of Acc64()
+        emit("add %s, %s, #%d", AccSP32(), AccSP32(), 0 - HALFWORD);
+        emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD * 2);
+      }
+      return;
     case AAT_AND:
 
       break;

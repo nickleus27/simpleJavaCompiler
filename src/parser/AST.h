@@ -59,6 +59,7 @@ ASTstatementList ASTStatementList(int line, ASTstatement first, ASTstatementList
 
 ASTexpression ASTIntLiteralExp(int line, int value);
 ASTexpression ASTBoolLiteralExp(int line, int value);
+ASTexpression ASTNullExp(int line);
 ASTexpression ASTOpExp(int line, ASToperator operator, ASTexpression left,
 		       ASTexpression right);
 ASTexpression ASTVarExp(int line, ASTvariable var);
@@ -194,7 +195,7 @@ struct ASTstatementList_ {
 
 struct ASTexpression_ {
   int line;
-  enum {IntLiteralExp, BoolLiteralExp, OpExp, VarExp, CallExp, NewExp, NewArrayExp} kind;
+  enum {IntLiteralExp, NullExp, BoolLiteralExp, OpExp, VarExp, CallExp, NewExp, NewArrayExp} kind;
   union {
     struct {
       int value;
@@ -202,6 +203,9 @@ struct ASTexpression_ {
     struct {
       int value;
     } boolLiteralExp;
+    struct {
+      int zero;
+    } nullExp;
     struct {
       ASToperator operator;
       ASTexpression left;

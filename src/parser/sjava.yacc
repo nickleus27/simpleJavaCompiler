@@ -83,7 +83,7 @@ ASTvariable ASTclassArray(ASTvariable first, ASTvariable third){
        MINUS MULTIPLY DIVIDE LBRACK RBRACK LBRACE
        RBRACE LPAREN RPAREN DOT COMMA SEMICOLON
        EQ NEQ LT GT LEQ GEQ GETS AND OR NOT PLUSPLUS
-       MINUSMINUS RETURN NEW GLOB
+       MINUSMINUS RETURN NEW GLOB TOKENNULL
        UMINUS UNOT
 
 %left OR
@@ -251,6 +251,7 @@ exp:    exp EQ exp                          { $$ = ASTOpExp( $1->line, AST_EQ, $
 |       INTEGER_LITERAL                     { $$ = ASTIntLiteralExp( $1.line_number, $1.value ); }
 |       TOKENTRUE                           { $$ = ASTBoolLiteralExp($1, 1); }
 |       TOKENFALSE                          { $$ = ASTBoolLiteralExp($1, 0); }
+|       TOKENNULL                           { $$ = ASTNullExp($1); } 
 |       new_arr_exp                         { $$ = $1; }
 |       new_exp                             { $$ = $1; }
 |       LPAREN exp RPAREN                   { $$ = $2; }

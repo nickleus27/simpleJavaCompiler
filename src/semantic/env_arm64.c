@@ -288,22 +288,22 @@ void nextInstanceElem(stack_env env, stack_queue queue, stack element, int offse
             switch(element->u.var.offset->offset){
                 case(PTR):
                 {
+                    element->u.var.offset->offset = offset_8; //offset for heap memory is positive
                     offset_8 += 8;
-                    element->u.var.offset->offset =  0-offset_8; //updating integer pointer
                     nextInstanceElem(env, queue, element->next, offset_8, offset_4, offset_1);
                     offset_8-=8; //remove offset from as leaving the scope
                 }break;
                 case(INT):
                 {
+                    element->u.var.offset->offset = offset_4; //offset for heap memory is positive
                     offset_4 += 4;
-                    element->u.var.offset->offset =  0-offset_4;//offset will always be negative below fp
                     nextInstanceElem(env, queue, element->next, offset_8, offset_4, offset_1);
                     offset_4-=4;
                 }break;
                 case(BOOL):
                 {
+                    element->u.var.offset->offset = offset_1; //offset for heap memory is positive
                     offset_1 += 1;
-                    element->u.var.offset->offset =  0-offset_1; //offset will always be negative below fp
                     nextInstanceElem(env, queue, element->next, offset_8, offset_4, offset_1);
                     offset_1-=1;
                 }break;

@@ -27,7 +27,7 @@ AATexpression ClassVariable(AATexpression base, int offset, int size_type){
    * compatibility. Double check in analyzeVar in semantic.c too.
    */
   if ( offset ) {
-    return AATMemory( AATOperator(base, AATConstant(offset, REG64), AAT_MINUS, REG64), size_type);
+    return AATMemory( AATOperator(base, AATConstant(offset, REG64), AAT_PLUS, REG64), size_type);
   }
   else
     return AATMemory( base, size_type ); /* if no offset do not need to subtract from memory */

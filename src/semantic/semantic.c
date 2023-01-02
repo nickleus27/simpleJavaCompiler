@@ -553,9 +553,13 @@ AATstatement analyzeStatement(environment typeEnv, environment functionEnv, envi
       expressionRec LHS, RHS;
       LHS = analyzeVar(typeEnv,functionEnv,varEnv,statement->u.assignStm.lhs);
       RHS = analyzeExpression(typeEnv,functionEnv,varEnv,statement->u.assignStm.rhs);
-      if (LHS.typ != RHS.typ) {
-	      Error(statement->line," Type mismatch on assignment");
+      if (LHS.typ == RHS.typ) {
+        return AssignmentStatement(LHS.tree, RHS.tree, LHS.typ->size_type);
       }
+      if ((LHS.typ->kind == class_type || LHS.typ->kind == array_type) && (RHS.typ == NullType())) {
+        return AssignmentStatement(LHS.tree, RHS.tree, LHS.typ->size_type);
+      }
+      Error(statement->line," Type mismatch on assignment");
       return AssignmentStatement(LHS.tree, RHS.tree, LHS.typ->size_type);
     }
     break;
@@ -693,6 +697,8 @@ expressionRec analyzeExpression(environment typeEnv, environment functionEnv, en
     return ExpressionRec( IntegerType(), ConstantExpression(exp->u.intLiteralExp.value, INT));
   case BoolLiteralExp:
     return ExpressionRec( BooleanType(), ConstantExpression(exp->u.boolLiteralExp.value, BOOL));
+  case NullExp:
+    return ExpressionRec( NullType(), ConstantExpression(exp->u.nullExp.zero, PTR));
   case OpExp:
     return analyzeOpExpression(typeEnv,functionEnv, varEnv, exp);
   case VarExp:
@@ -818,7 +824,14 @@ expressionRec analyzeOpExpression(environment typeEnv, environment functionEnv, 
     if (LHS.typ == BooleanType() && RHS.typ == BooleanType()) {
       return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_EQ,BOOL));
     }
-    if (LHS.typ == RHS.typ) {
+    if ((LHS.typ->kind == class_type && RHS.typ->kind == null_type) ||
+        (LHS.typ->kind == null_type && RHS.typ->kind == class_type) ||
+        (LHS.typ == RHS.typ)) {
+      return ExpressionRec(BooleanType(), OperatorExpression(LHS.tree, RHS.tree, AAT_EQ, PTR));
+    }
+    if ((LHS.typ->kind == array_type && RHS.typ->kind == null_type) ||
+        (LHS.typ->kind == null_type && RHS.typ->kind == array_type) ||
+        (LHS.typ == RHS.typ)) {
       return ExpressionRec(BooleanType(), OperatorExpression(LHS.tree, RHS.tree, AAT_EQ, PTR));
     }
     Error(exp->line," Both arguments to == must be the same type");
@@ -835,8 +848,15 @@ expressionRec analyzeOpExpression(environment typeEnv, environment functionEnv, 
     if (LHS.typ == BooleanType() && RHS.typ == BooleanType()) {
       return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_NEQ,BOOL));
     }
-    if (LHS.typ == RHS.typ) {
-      return ExpressionRec(BooleanType(), OperatorExpression(LHS.tree, RHS.tree, AAT_EQ, PTR));
+    if ((LHS.typ->kind == class_type && RHS.typ->kind == null_type) ||
+        (LHS.typ->kind == null_type && RHS.typ->kind == class_type) ||
+        (LHS.typ == RHS.typ)) {
+      return ExpressionRec(BooleanType(), OperatorExpression(LHS.tree, RHS.tree, AAT_NEQ, PTR));
+    }
+    if ((LHS.typ->kind == array_type && RHS.typ->kind == null_type) ||
+        (LHS.typ->kind == null_type && RHS.typ->kind == array_type) ||
+        (LHS.typ == RHS.typ)) {
+      return ExpressionRec(BooleanType(), OperatorExpression(LHS.tree, RHS.tree, AAT_NEQ, PTR));
     }
     Error(exp->line," Both arguments to == must be the same type");
     return ExpressionRec(BooleanType(),OperatorExpression(LHS.tree,RHS.tree,AAT_NEQ,0));
