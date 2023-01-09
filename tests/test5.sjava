@@ -16,4 +16,8 @@ void main() {
             printInt(0);
         }
     }
+
+    if(!false){
+        printInt(101);
+    }
 }

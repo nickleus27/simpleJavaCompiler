@@ -28,6 +28,8 @@ void generateMove(AATstatement tree);
 void generateExpression(AATexpression tree);
 void generateOpExp32(AATexpression tree);
 void generateOpExp64(AATexpression tree);
+void generateLeftExp(AATexpression tree);
+void generateRightExp(AATexpression tree);
 void generateMemoryExpression(AATexpression tree);
 void generateConstantExp(AATexpression tree);
 void generateConstantExp_offset(AATexpression tree);
@@ -77,8 +79,8 @@ void generateExpression(AATexpression tree){
       generateRegisterExp(tree);
       break;
     case AAT_OPERATOR:
-      generateExpression(tree->u.operator.left);
-      generateExpression(tree->u.operator.right);
+      generateLeftExp(tree->u.operator.left);
+      generateRightExp(tree->u.operator.right);
       generateOpExp(tree);
     break;
     case AAT_FUNCTIONCALL:
@@ -86,71 +88,88 @@ void generateExpression(AATexpression tree){
       break;
   }
 }
+void generateLeftExp(AATexpression tree) {
+  switch(tree->size_type/4) {
+    case SWITCH_BYTE:
+      generateExpression(tree);
+      emit("str %s, [%s], #%d", Acc32(), AccSP32(), 0-HALFWORD);
+      break;
+    case SWITCH_REG32:
+      generateExpression(tree);
+      emit("str %s, [%s], #%d", Acc32(), AccSP32(), 0-HALFWORD);
+      break;
+    case SWITCH_REG64:
+      generateExpression(tree);
+      emit("str %s, [%s], #%d", Acc64(), AccSP64(), 0-WORD);
+      break;
+    default:
+      emit("/*BAD LEFT HAND EXPRESSION*/\n");
+      break;
+  }
+}
+void generateRightExp(AATexpression tree) {
+    switch(tree->size_type/4) {
+    case SWITCH_BYTE:
+      generateExpression(tree);
+      break;
+    case SWITCH_REG32:
+      generateExpression(tree);
+      break;
+    case SWITCH_REG64:
+      generateExpression(tree);
+      break;
+    default:
+      emit("/*BAD RIGHT HAND EXPRESSION*/\n");
+      break;
+  }
+}
 void generateConstantExp(AATexpression tree){
   switch(tree->size_type/4){// devide by 4 to minimize space 1/4==0, 4/4==1, 8/4==2
     case SWITCH_BYTE:
       emit("mov %s, #%d", Acc32(), tree->u.constant);
-      emit("str %s, [%s]", Acc32(), AccSP32());//use str (not strb) because placing in 4b (1word) space on stack
-      emit("add %s, %s, #%d", AccSP32(), AccSP32(), 0-HALFWORD);
-    break;
+      break;
     case SWITCH_REG32:
       emit("mov %s, #%d", Acc32(), tree->u.constant);
-      emit("str %s, [%s]", Acc32(), AccSP32());
-      emit("add %s, %s, #%d", AccSP32(), AccSP32(), 0-HALFWORD);
-    break;
+      break;
     case SWITCH_REG64:
       emit("mov %s, #%d", Acc64(), tree->u.constant);
-      emit("str %s, [%s]", Acc64(), AccSP64());
-      emit("add %s, %s, #%d", AccSP64(), AccSP64(), 0-WORD);
-    break;
+      break;
     default:
-    break;
+      emit("/*BAD CONSTANT EXPRESSION*/\n");
+      break;
   }
 }
 void generateConstantExp_offset(AATexpression tree){
   switch(tree->size_type/4){// devide by 4 to minimize space 1/4==0, 4/4==1, 8/4==2
     case SWITCH_BYTE:
       emit("mov %s, #%d", Acc32(), tree->u.offset->offset);
-      emit("str %s, [%s]", Acc32(), AccSP32());//use str (not strb) because placing in 4b (1word) space on stack
-      emit("add %s, %s, #%d", AccSP32(), AccSP32(), 0-HALFWORD);
-    break;
+      break;
     case SWITCH_REG32:
       emit("mov %s, #%d", Acc32(), tree->u.offset->offset);
-      emit("str %s, [%s]", Acc32(), AccSP32());
-      emit("add %s, %s, #%d", AccSP32(), AccSP32(), 0-HALFWORD);
-    break;
+      break;
     case SWITCH_REG64:
       emit("mov %s, #%d", Acc64(), tree->u.offset->offset);
-      emit("str %s, [%s]", Acc64(), AccSP64());
-      emit("add %s, %s, #%d", AccSP64(), AccSP64(), 0-WORD);
-    break;
+      break;
     default:
-    break;
+      emit("/*BAD OFFSET EXPRESSION*/\n");
+      break;
   }
 }
+
 void generateRegisterExp(AATexpression tree){
-    switch(tree->size_type/4){// devide by 4 to minimize space 1/4==0, 4/4==1, 8/4==2
+  switch(tree->size_type/4){// devide by 4 to minimize space 1/4==0, 4/4==1, 8/4==2
     case SWITCH_BYTE:
-      emit("strb %s, [%s]", tree->u.reg, AccSP32());
-      emit("add %s, %s, #%d", AccSP32(), AccSP32(), 0-HALFWORD);
-    break;
+      emit("mov %s, %s", Acc32(), tree->u.reg);
+      break;
     case SWITCH_REG32:
-      emit("str %s, [%s]", tree->u.reg, AccSP32());
-      emit("add %s, %s, #%d", AccSP32(), AccSP32(), 0-HALFWORD);
-    break;
+      emit("mov %s, %s", Acc32(), tree->u.reg);
+      break;
     case SWITCH_REG64:
-      /* need to check for SP reg... move first*/
-      if( tree->u.reg != SP() ){
-        emit("str %s, [%s]", tree->u.reg, AccSP64());
-        emit("add %s, %s, #%d", AccSP64(), AccSP64(), 0-WORD);
-      }else{
-        emit("mov %s, %s", Acc64(), SP());
-        emit("str %s, [%s]", Acc64(), AccSP64());
-        emit("add %s, %s, #%d", AccSP64(), AccSP64(), 0-WORD);
-      }
-    break;
+      emit("mov %s, %s", Acc64(), tree->u.reg);
+      break;
     default:
-    break;
+      emit("/*BAD REGISTER EXPRESSION*/\n");
+      break;
   }
 }
 void generateOpExp(AATexpression tree){
@@ -161,191 +180,131 @@ void generateOpExp(AATexpression tree){
        * TOODO: Is it correct to always send bool and char to OpExp32?
        */
       generateOpExp32(tree);
-    break;
+      break;
     case SWITCH_REG32:
       generateOpExp32(tree);
-    break;
+      break;
     case SWITCH_REG64:
       generateOpExp64(tree);
-    break;
+      break;
     default:
       emit("/*BAD OPERATOR EXPRESSION*/\n");
-    break;
+      break;
   }
 }
+
 void generateFunCall(AATexpression tree){
-    switch(tree->size_type/4){// devide by 4 to minimize space 1/4==0, 4/4==1, 8/4==2
+  switch(tree->size_type/4){// devide by 4 to minimize space 1/4==0, 4/4==1, 8/4==2
     case SWITCH_BYTE:
-          /**
-       * TODO: check if argMemSize is 0 before adjusting stack size
-       * 
-       */
       if (tree->u.functionCall.argMemSize){
-        emit("mov %s, %s", Acc64(), SP());
-        emit("str %s, [%s, #-%d]!", Acc64(), SP(), tree->u.functionCall.argMemSize);
+        emit("add %s, %s, #-%d", SP(), SP(), tree->u.functionCall.argMemSize);
         addActualsToStack(tree->u.functionCall.actuals);
         emit("bl %s", tree->u.functionCall.jump);
-        emit("str %s, [%s]", Result32(), AccSP32());
-        emit("add %s, %s, #%d", AccSP32(), AccSP32(), 0-HALFWORD);
-        emit("str %s, [%s]", Acc64(), SP());
-        emit("mov %s, %s", SP(), Acc64());
+        emit("mov %s, %s", Acc32(), Result32());
+        emit("add %s, %s, #%d", SP(), SP(), tree->u.functionCall.argMemSize);
       } else {
         emit("bl %s", tree->u.functionCall.jump);
-        emit("str %s, [%s]", Result32(), AccSP32());
-        emit("add %s, %s, #%d", AccSP32(), AccSP32(), 0-HALFWORD);
+        emit("mov %s, %s", Acc32(), Result32());
       }
-    break;
+      break;
     case SWITCH_REG32:
       if (tree->u.functionCall.argMemSize){
-        emit("mov %s, %s", Acc64(), SP());
-        emit("str %s, [%s, #-%d]!", Acc64(), SP(), tree->u.functionCall.argMemSize);
+        emit("add %s, %s, #-%d", SP(), SP(), tree->u.functionCall.argMemSize);
         addActualsToStack(tree->u.functionCall.actuals);
         emit("bl %s", tree->u.functionCall.jump);
-        emit("str %s, [%s]", Result32(), AccSP32());
-        emit("add %s, %s, #%d", AccSP32(), AccSP32(), 0-HALFWORD);
-        emit("str %s, [%s]", Acc64(), SP());
-        emit("mov %s, %s", SP(), Acc64());
+        emit("mov %s, %s", Acc32(), Result32());
+        emit("add %s, %s, #%d", SP(), SP(), tree->u.functionCall.argMemSize);
       } else {
         emit("bl %s", tree->u.functionCall.jump);
-        emit("str %s, [%s]", Result32(), AccSP32());
-        emit("add %s, %s, #%d", AccSP32(), AccSP32(), 0-HALFWORD);
+        emit("mov %s, %s", Acc32(), Result32());
       }
-    break;
+      break;
     case SWITCH_REG64:
-    if (tree->u.functionCall.argMemSize){
-        emit("mov %s, %s", Acc64(), SP());
-        emit("str %s, [%s, #-%d]!", Acc64(), SP(), tree->u.functionCall.argMemSize);
+      if (tree->u.functionCall.argMemSize){
+        emit("add %s, %s, #-%d", SP(), SP(), tree->u.functionCall.argMemSize);
         addActualsToStack(tree->u.functionCall.actuals);
         emit("bl %s", tree->u.functionCall.jump);
-        emit("str %s, [%s]", Result64(), AccSP64());
-        emit("add %s, %s, #%d", AccSP64(), AccSP64(), 0-WORD);
-        emit("str %s, [%s]", Acc64(), SP());
-        emit("mov %s, %s", SP(), Acc64());
-    } else {
+        emit("mov %s, %s", Acc64(), Result64());
+        emit("add %s, %s, #%d", SP(), SP(), tree->u.functionCall.argMemSize);
+      } else {
         emit("bl %s", tree->u.functionCall.jump);
-        emit("str %s, [%s]", Result64(), AccSP64());
-        emit("add %s, %s, #%d", AccSP64(), AccSP64(), 0-WORD);
-    }
-    break;
+        emit("mov %s, %s", Acc64(), Result64());
+      }
+      break;
     default:
-    break;
+      emit("/*BAD FUNCTION CALL EXPRESSION*/\n");
+      break;
   }
 }
 
 void generateOpExp64(AATexpression tree){
-  if ( tree->u.operator.left->size_type == REG32 || tree->u.operator.right->size_type == REG32) { //if size types dont match
-    emit("ldr %s, [%s, #%d]", Acc32(), AccSP32(), HALFWORD);
-    emit("sxtw %s, %s", Acc64(), Acc32());
-    emit("ldr %s, [%s, #%d]", Tmp0_64(), AccSP64(), WORD);
+  if (tree->u.operator.left->size_type == REG32) { //if size types dont match
+    emit("ldr %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD);
+    emit("sxtw %s, %s", Tmp0_64(), Tmp0_32());
   } else {
-    emit("ldr %s, [%s, #%d]", Acc64(), AccSP64(), WORD * 2);
-    emit("ldr %s, [%s, #%d]", Tmp0_64(), AccSP64(), WORD);
+    emit("ldr %s, [%s, #%d]!", Tmp0_64(), AccSP64(), WORD);
+  }
+  if (tree->u.operator.right->size_type == REG32) {
+    emit("sxtw %s, %s", Acc64(), Acc32());
   }
   switch (tree->u.operator.op){
     case AAT_PLUS:
-      emit("add %s, %s, %s", Acc64(), Acc64(), Tmp0_64());
+      emit("add %s, %s, %s", Acc64(), Tmp0_64(), Acc64());
       break;
     case AAT_MINUS:
-      emit("sub %s, %s, %s", Acc64(), Acc64(), Tmp0_64());
+      emit("sub %s, %s, %s", Acc64(), Tmp0_64(), Acc64());
       break;
     case AAT_MULTIPLY:
-      emit("mul %s, %s, %s", Acc64(), Acc64(), Tmp0_64());
+      emit("mul %s, %s, %s", Acc64(), Tmp0_64(), Acc64());
       break;
     case AAT_DIVIDE:
     /**
      * TODO: Need to add code to throw error when dividing by ZERO
      */
-      emit("sdiv %s, %s, %s", Acc64(), Acc64(), Tmp0_64());
+      emit("sdiv %s, %s, %s", Acc64(), Tmp0_64(), Acc64());
       break;
     case AAT_LT:
-      emit("cmp %s, %s", Acc64(), Tmp0_64());
+      emit("cmp %s, %s", Tmp0_64(), Acc64());
       emit("cset %s, lt", Acc64());
-      if (tree->u.operator.left->size_type == REG32 || tree->u.operator.right->size_type == REG32) {
-        emit("str %s, [%s, #%d]", Acc32(), AccSP32(), HALFWORD); //str lower 32bits of Acc64()
-        emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD);
-      } else {
-        emit("str %s, [%s]", Acc32(), AccSP32()); //str lower 32bits of Acc64()
-        emit("add %s, %s, #%d", AccSP32(), AccSP32(), 0 - HALFWORD);
-        emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD * 2);
-      }
-      return;
+      break;
     case AAT_GT:
-      emit("cmp %s, %s", Acc64(), Tmp0_64());
+      emit("cmp %s, %s", Tmp0_64(), Acc64());
       emit("cset %s, gt", Acc64());
-      if (tree->u.operator.left->size_type == REG32 || tree->u.operator.right->size_type == REG32) {
-        emit("str %s, [%s, #%d]", Acc32(), AccSP32(), HALFWORD); //str lower 32bits of Acc64()
-        emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD);
-      } else {
-        emit("str %s, [%s]", Acc32(), AccSP32()); //str lower 32bits of Acc64()
-        emit("add %s, %s, #%d", AccSP32(), AccSP32(), 0 - HALFWORD);
-        emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD * 2);
-      }
-      return;
+      break;
     case AAT_LEQ:
-      emit("cmp %s, %s", Acc64(), Tmp0_64());
+      emit("cmp %s, %s", Tmp0_64(), Acc64());
       emit("cset %s, le", Acc64());
-      if (tree->u.operator.left->size_type == REG32 || tree->u.operator.right->size_type == REG32) {
-        emit("str %s, [%s, #%d]", Acc32(), AccSP32(), HALFWORD); //str lower 32bits of Acc64()
-        emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD);
-      } else {
-        emit("str %s, [%s]", Acc32(), AccSP32()); //str lower 32bits of Acc64()
-        emit("add %s, %s, #%d", AccSP32(), AccSP32(), 0 - HALFWORD);
-        emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD * 2);
-      }
       return;;
     case AAT_GEQ:
-      emit("cmp %s, %s", Acc64(), Tmp0_64());
+      emit("cmp %s, %s", Tmp0_64(), Acc64());
       emit("cset %s, ge", Acc64());
-      if (tree->u.operator.left->size_type == REG32 || tree->u.operator.right->size_type == REG32) {
-        emit("str %s, [%s, #%d]", Acc32(), AccSP32(), HALFWORD); //str lower 32bits of Acc64()
-        emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD);
-      } else {
-        emit("str %s, [%s]", Acc32(), AccSP32()); //str lower 32bits of Acc64()
-        emit("add %s, %s, #%d", AccSP32(), AccSP32(), 0 - HALFWORD);
-        emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD * 2);
-      }
       return;
     case AAT_EQ:
-      emit("cmp %s, %s", Acc64(), Tmp0_64());
+      emit("cmp %s, %s", Tmp0_64(), Acc64());
       emit("cset %s, eq", Acc64());
-      if (tree->u.operator.left->size_type == REG32 || tree->u.operator.right->size_type == REG32) {
-        emit("str %s, [%s, #%d]", Acc32(), AccSP32(), HALFWORD); //str lower 32bits of Acc64()
-        emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD);
-      } else {
-        emit("str %s, [%s]", Acc32(), AccSP32()); //str lower 32bits of Acc64()
-        emit("add %s, %s, #%d", AccSP32(), AccSP32(), 0 - HALFWORD);
-        emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD * 2);
-      }
       return;
     case AAT_NEQ:
-      emit("cmp %s, %s", Acc64(), Tmp0_64());
+      emit("cmp %s, %s", Tmp0_64(), Acc64());
       emit("cset %s, ne", Acc64());
-      if (tree->u.operator.left->size_type == REG32 || tree->u.operator.right->size_type == REG32) {
-        emit("str %s, [%s, #%d]", Acc32(), AccSP32(), HALFWORD); //str lower 32bits of Acc64()
-        emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD);
-      } else {
-        emit("str %s, [%s]", Acc32(), AccSP32()); //str lower 32bits of Acc64()
-        emit("add %s, %s, #%d", AccSP32(), AccSP32(), 0 - HALFWORD);
-        emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD * 2);
-      }
       return;
     case AAT_AND:
-
+    /**
+     * TODO:
+     */
       break;
     case AAT_OR:
-
+    /**
+     * TODO:
+     */
       break;
     case AAT_NOT:
-
+    /**
+     * TODO:
+     */
       break;
-    default: emit("Bad 64bit Operator Expression");
-  }
-  if ( tree->u.operator.left->size_type == REG32 || tree->u.operator.right->size_type == REG32) {
-    emit("str %s, [%s, #%d]", Acc64(), AccSP64(), WORD);
-    emit("add %s, %s, #%d", AccSP32(), AccSP32(), HALFWORD);
-  } else {
-    emit("str %s, [%s, #%d]", Acc64(), AccSP64(), WORD * 2);
-    emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD);
+    default: 
+      emit("Bad 64bit Operator Expression");
+      break;
   }
 }
 
@@ -356,120 +315,71 @@ void generateOpExp32(AATexpression tree){
       */
   switch (tree->u.operator.op){
     case AAT_PLUS:
-      emit("ldr %s, [%s, #%d]", Tmp0_32(), AccSP32(), WORD);
-      emit("ldr %s, [%s, #%d]", Tmp1_32(), AccSP32(), HALFWORD);
-      emit("add %s, %s, %s", Acc32(), Tmp0_32(), Tmp1_32());
-      emit("str %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
-      emit("add %s, %s, #%d", AccSP32(), AccSP32(), HALFWORD);
+      emit("ldr %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD);
+      emit("add %s, %s, %s", Acc32(), Tmp0_32(), Acc32());
       break;
     case AAT_MINUS:
-      emit("ldr %s, [%s, #%d]", Tmp0_32(), AccSP32(), WORD);
-      emit("ldr %s, [%s, #%d]", Tmp1_32(), AccSP32(), HALFWORD);
-      emit("sub %s, %s, %s", Acc32(), Tmp0_32(), Tmp1_32());
-      emit("str %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
-      emit("add %s, %s, #%d", AccSP32(), AccSP32(), HALFWORD);
+      emit("ldr %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD);
+      emit("sub %s, %s, %s", Acc32(), Tmp0_32(), Acc32());
       break;
     case AAT_MULTIPLY:
-      emit("ldr %s, [%s, #%d]", Tmp0_32(), AccSP32(), WORD);
-      emit("ldr %s, [%s, #%d]", Tmp1_32(), AccSP32(), HALFWORD);
-      emit("mul %s, %s, %s", Acc32(), Tmp0_32(), Tmp1_32());
-      emit("str %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
-      emit("add %s, %s, #%d", AccSP32(), AccSP32(), HALFWORD);
+      emit("ldr %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD);
+      emit("mul %s, %s, %s", Acc32(), Tmp0_32(), Acc32());
       break;
     case AAT_DIVIDE:
       /**
      * TODO: Need to add code to throw error when dividing by ZERO
      */
-      emit("ldr %s, [%s, #%d]", Tmp0_32(), AccSP32(), WORD);
-      emit("ldr %s, [%s, #%d]", Tmp1_32(), AccSP32(), HALFWORD);
-      emit("sdiv %s, %s, %s", Acc32(), Tmp0_32(), Tmp1_32());
-      emit("str %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
-      emit("add %s, %s, #%d", AccSP32(), AccSP32(), HALFWORD);
+      emit("ldr %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD);
+      emit("sdiv %s, %s, %s", Acc32(), Tmp0_32(), Acc32());
       break;
-
-    /**
-     * TODO: Do I need to change STRB TO STR in boolean expressions
-     * When pushing value on 32bit (4byte/AccSP32) stack??
-     * go through change and test!
-     */
     case AAT_LT:
-      emit("ldr %s, [%s, #%d]", Tmp0_32(), AccSP32(), WORD);
-      emit("ldr %s, [%s, #%d]", Tmp1_32(), AccSP32(), HALFWORD);
-      emit("cmp %s, %s", Tmp0_32(), Tmp1_32());
+      emit("ldr %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD);
+      emit("cmp %s, %s", Tmp0_32(), Acc32());
       emit("cset %s, lt", Acc32());
-      emit("str %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
-      emit("add %s, %s, #%d", AccSP32(), AccSP32(), HALFWORD);
       break;
     case AAT_GT:
-      emit("ldr %s, [%s, #%d]", Tmp0_32(), AccSP32(), WORD);
-      emit("ldr %s, [%s, #%d]", Tmp1_32(), AccSP32(), HALFWORD);
-      emit("cmp %s, %s", Tmp0_32(), Tmp1_32());
+      emit("ldr %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD);
+      emit("cmp %s, %s", Tmp0_32(), Acc32());
       emit("cset %s, gt", Acc32());
-      emit("str %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
-      emit("add %s, %s, #%d", AccSP32(), AccSP32(), HALFWORD);
       break;
     case AAT_LEQ:
-      emit("ldr %s, [%s, #%d]", Tmp0_32(), AccSP32(), WORD);
-      emit("ldr %s, [%s, #%d]", Tmp1_32(), AccSP32(), HALFWORD);
-      emit("cmp %s, %s", Tmp0_32(), Tmp1_32());
+      emit("ldr %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD);
+      emit("cmp %s, %s", Tmp0_32(), Acc32());
       emit("cset %s, le", Acc32());
-      emit("str %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
-      emit("add %s, %s, #%d", AccSP32(), AccSP32(), HALFWORD);
       break;
     case AAT_GEQ:
-      emit("ldr %s, [%s, #%d]", Tmp0_32(), AccSP32(), WORD);
-      emit("ldr %s, [%s, #%d]", Tmp1_32(), AccSP32(), HALFWORD);
-      emit("cmp %s, %s", Tmp0_32(), Tmp1_32());
+      emit("ldr %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD);
+      emit("cmp %s, %s", Tmp0_32(), Acc32());
       emit("cset %s, ge", Acc32());
-      emit("str %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
-      emit("add %s, %s, #%d", AccSP32(), AccSP32(), HALFWORD);
       break;
     case AAT_EQ:
-      emit("ldr %s, [%s, #%d]", Tmp0_32(), AccSP32(), WORD);
-      emit("ldr %s, [%s, #%d]", Tmp1_32(), AccSP32(), HALFWORD);
-      emit("cmp %s, %s", Tmp0_32(), Tmp1_32());
+      emit("ldr %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD);
+      emit("cmp %s, %s", Tmp0_32(), Acc32());
       emit("cset %s, eq", Acc32());
-      emit("str %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
-      emit("add %s, %s, #%d", AccSP32(), AccSP32(), HALFWORD);
       break;
     case AAT_NEQ:
-      emit("ldr %s, [%s, #%d]", Tmp0_32(), AccSP32(), WORD);
-      emit("ldr %s, [%s, #%d]", Tmp1_32(), AccSP32(), HALFWORD);
-      emit("cmp %s, %s", Tmp0_32(), Tmp1_32());
+      emit("ldr %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD);
+      emit("cmp %s, %s", Tmp0_32(), Acc32());
       emit("cset %s, ne", Acc32());
-      emit("str %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
-      emit("add %s, %s, #%d", AccSP32(), AccSP32(), HALFWORD);
       break;
     case AAT_AND:
-      emit("ldrb %s, [%s, #%d]", Tmp0_32(), AccSP32(), WORD);
-      emit("ldrb %s, [%s, #%d]", Tmp1_32(), AccSP32(), HALFWORD);
-      emit("and %s, %s, %s", Acc32(), Tmp0_32(), Tmp1_32());
-      emit("str %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
-      emit("add %s, %s, #%d", AccSP32(), AccSP32(), HALFWORD);
+      emit("ldrb %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD);
+      emit("and %s, %s, %s", Acc32(), Tmp0_32(), Acc32());
       break;
     case AAT_OR:
-      emit("ldrb %s, [%s, #%d]", Tmp0_32(), AccSP32(), WORD);
-      emit("ldrb %s, [%s, #%d]", Tmp1_32(), AccSP32(), HALFWORD);
-      emit("orr %s, %s, %s", Acc32(), Tmp0_32(), Tmp1_32());
-      emit("str %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
-      emit("add %s, %s, #%d", AccSP32(), AccSP32(), HALFWORD);
+      emit("ldrb %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD);
+      emit("orr %s, %s, %s", Acc32(), Tmp0_32(), Acc32());
       break;
     case AAT_NOT:
-      emit("ldrb %s, [%s, #%d]", Tmp0_32(), AccSP32(), WORD); // Tmp0 == #2
-      emit("ldrb %s, [%s, #%d]", Tmp1_32(), AccSP32(), HALFWORD); // Tmp1 == boolean value
-      emit("mvn %s, %s", Tmp1_32(), Tmp1_32()); // move NOT boolean value
-      emit("add %s, %s, %s", Acc32(), Tmp0_32(), Tmp1_32()); // add #2 to inverted value to get 0 | 1
-      emit("str %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
-      emit("add %s, %s, #%d", AccSP32(), AccSP32(), HALFWORD);
+      emit("ldrb %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD); // Tmp0 == #2
+      emit("mvn %s, %s", Acc32(), Acc32()); //Acc32 == boolean value, move NOT boolean value
+      emit("add %s, %s, %s", Acc32(), Tmp0_32(), Acc32()); // add #2 to inverted value to get 0 | 1
     break;
     default: emit("Bad 64bit Operator Expression");
   }
-  /** ADD THIS CODE AFTER SWITCH AND REMOVE FROM EACH CASE...REDUNDANT
-   *  emit("str %s, [%s, #%d]", Acc32(), AccSP32(), WORD);
-   *  emit("add %s, %s, #%d", AccSP32(), AccSP32(), HALFWORD);
-   * 
-   */
 }
+
 void addActualsToStack(AATexpressionList actual){
   if (!actual)
     return;
@@ -478,19 +388,16 @@ void addActualsToStack(AATexpressionList actual){
     case(SWITCH_BYTE):
     {
       generateExpression(actual->first);
-      emit("ldrb %s, [%s, #%d]!", Acc32(), AccSP32(), HALFWORD);
       emit("str %s, [%s, #%d]", Acc32(), SP(), actual->offset);
     }break;
     case(SWITCH_REG32):
     {
       generateExpression(actual->first);
-      emit("ldr %s, [%s, #%d]!", Acc32(), AccSP32(), HALFWORD);
       emit("str %s, [%s, #%d]", Acc32(), SP(), actual->offset);
     }break;
     case(SWITCH_REG64):
     {
       generateExpression(actual->first);
-      emit("ldr %s, [%s, #%d]!", Acc64(), AccSP64(), WORD);
       emit("str %s, [%s, #%d]", Acc64(), SP(), actual->offset);
     }break;
     default: emit("Bad expression size type\n");
@@ -499,19 +406,22 @@ void addActualsToStack(AATexpressionList actual){
 void generateStatement(AATstatement tree) {
   switch (tree->kind) {
     case AAT_MOVE:
-        generateMove(tree);
-        break;
+      generateMove(tree);
+      break;
     case AAT_JUMP:
-        emit("b %s", tree->u.jump);
-        break;
+      emit("b %s", tree->u.jump);
+      break;
     case AAT_CONDITIONALJUMP:
-        generateExpression(tree->u.conditionalJump.test);
-        emit("ldrb %s, [%s, #%d]!", Acc32(), AccSP32(), HALFWORD);
-        emit("cmp %s, #1", Acc32());
-        emit("b.eq %s", tree->u.conditionalJump.jump);
-        break;
+      generateExpression(tree->u.conditionalJump.test);
+      emit("cmp %s, #1", Acc32());
+      emit("b.eq %s", tree->u.conditionalJump.jump);
+      break;
     case AAT_FUNCDEF:
     {
+      /**
+       * TODO: STACKFRAME REG OFFSET HERE!
+       * 
+       */
       int localVarSize = tree->u.functionDef.framesize - 4*8; /* saving 5 registers so 5-1=4, SP starts om 0 offset*/
       generateStatement(tree->u.functionDef.labels->u.sequential.left);
       /* assembly code fore saving registers and adjusting pointers*/
@@ -556,59 +466,40 @@ void generateStatement(AATstatement tree) {
       generateStatement(tree->u.sequential.right);
       break;
     case AAT_EMPTY:
-        break;
+      break;
     case AAT_LABEL:
       emit("%s:", tree->u.label);
-        break;
+      break;
     case AAT_RETURN:
       emit("ret");
-        break;
+      break;
     case AAT_HALT:
-
-        break;
+      break;
   }
 }
 
 void generateMove(AATstatement tree) {
   /* Generates inefficient assembly */
   if (tree->u.move.lhs->kind == AAT_REGISTER) {
+    generateExpression(tree->u.move.rhs);
     if(tree->u.move.size == REG32){
-      generateExpression(tree->u.move.rhs);
-      emit("ldr %s, [%s, #%d]!", tree->u.move.lhs->u.reg, AccSP32(), HALFWORD);
+      emit("mov %s, %s", tree->u.move.lhs->u.reg, Acc32());
     }else if(tree->u.move.size == REG64 ){
-      generateExpression(tree->u.move.rhs);
-      /* need to check for SP reg... move first*/
-      if( tree->u.move.lhs->u.reg != SP() ){
-        emit("ldr %s, [%s, #%d]!", tree->u.move.lhs->u.reg, AccSP64(), WORD);
-      }else{
-        emit("ldr %s, [%s, #%d]!", Acc64(), AccSP64(), WORD);
-        emit("mov %s, %s", SP(), Acc64());
-      }
+      emit("mov %s, %s", tree->u.move.lhs->u.reg, Acc64());
     }else if(tree->u.move.size == BYTE){
-      generateExpression(tree->u.move.rhs);
-      emit("ldrb %s, [%s, #%d]!", tree->u.move.lhs->u.reg, AccSP32(), HALFWORD);
+      emit("mov %s, %s", tree->u.move.lhs->u.reg, Acc32());
     }
   } else if (tree->u.move.lhs->kind == AAT_MEMORY) {
+      generateExpression(tree->u.move.lhs->u.memory);//bypass dereference value @ mem addresss & just get address
+      emit("str %s, [%s], #%d", Acc64(), AccSP64(), 0-WORD);//store address on Expression Stack
+      generateExpression(tree->u.move.rhs);
+      emit("ldr %s, [%s, #%d]!", Tmp0_64(), AccSP64(), WORD);
     if(tree->u.move.size == REG32){
-      generateExpression(tree->u.move.lhs->u.memory);//bypass dereference value @ mem addresss & just get address
-      generateExpression(tree->u.move.rhs);
-      emit("ldr %s, [%s, #%d]!", Acc64(), AccSP64(), WORD);//store address in a reg
-      emit("ldr %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD);//store value in reg (32bit)
-      emit("str %s, [%s]", Tmp0_32(), Acc64()); //implement move
+      emit("str %s, [%s]", Acc32(), Tmp0_64()); //implement move
     }else if (tree->u.move.size == REG64 ){
-      generateExpression(tree->u.move.lhs->u.memory);
-      generateExpression(tree->u.move.rhs);
-      emit("//implement move");
-      emit("ldr %s, [%s, #%d]", Acc64(), AccSP64(), WORD * 2);//store address in a reg
-      emit("ldr %s, [%s, #%d]", Tmp0_64(), AccSP64(), WORD);//store value in reg (64bit)
-      emit("str %s, [%s]", Tmp0_64(), Acc64()); //implement move
-      emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD * 2); //update exp stack pointer
+      emit("str %s, [%s]", Acc64(), Tmp0_64()); //implement move
     }else if (tree->u.move.size == BYTE ){
-      generateExpression(tree->u.move.lhs->u.memory);//bypass dereference value @ mem addresss & just get address
-      generateExpression(tree->u.move.rhs);
-      emit("ldr %s, [%s, #%d]!", Acc64(), AccSP64(), WORD);//store address in a reg
-      emit("ldrb %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD);//store value in reg (BYTE)
-      emit("strb %s, [%s]", Tmp0_32(), Acc64()); //implement move
+      emit("str %s, [%s]", Acc32(), Tmp0_64()); //implement move
     }
   } else {
     fprintf(stderr,"Bad MOVE node -- LHS should be T_mem or T_register\n");
@@ -618,18 +509,12 @@ void generateMove(AATstatement tree) {
 void generateMemoryExpression(AATexpression tree) {
   /* generates inefficent code */
   generateExpression(tree->u.memory);
-  emit("ldr %s, [%s, #%d]", Acc64(), AccSP64(), WORD); //load address
   if(tree->size_type == REG32){
     emit("ldr %s, [%s]", Acc32(), Acc64()); //dereference address to get value
-    emit("str %s, [%s], #%d", Acc32(), AccSP32(), 0-HALFWORD); //store value on reg32 Stack postfix adjust pointer
-    emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD); //move up reg64 stack pointer
   }else if(tree->size_type == REG64){
     emit("ldr %s, [%s]", Acc64(), Acc64());
-    emit("str %s, [%s, #%d]", Acc64(), AccSP64(), WORD);
   }else if (tree->size_type == BYTE){
     emit("ldrb %s, [%s]", Acc32(), Acc64()); //dereference address to get value
-    emit("str %s, [%s], #%d", Acc32(), AccSP32(), 0-HALFWORD); //use str because of 4byte space on stack
-    emit("add %s, %s, #%d", AccSP64(), AccSP64(), WORD); //move up reg64 stack pointer
   }
 }
 
@@ -1071,10 +956,6 @@ emit("\tb\tLBB0_27");
 emit("LBB0_27:");
 emit("\tldr\tx0, [sp, #88]");
 emit("\tadd\tsp, sp, #96");
-/**
- * TODO: caller function expects sp to be in x9 returning from callee. should fix this in future
- */
-emit("\tmov x9, sp");
 emit("\tret");
 emit("                                        ; -- End function");
 
