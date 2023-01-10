@@ -3,6 +3,7 @@ from subprocess import run
 from os import remove
 from os import path
 from os import system
+from os import listdir
 import filecmp
 
 class Test_sJava_Files(unittest.TestCase):
@@ -10,14 +11,23 @@ class Test_sJava_Files(unittest.TestCase):
     exe = "."
     dir = "tests"
     
-    def __init__(self, *args, **kwargs):
-        super(Test_sJava_Files, self).__init__(*args, **kwargs)
+    def setup(self):
+        if not path.isfile(self.sjc_exe):
+            src = "src"
+            build = "build"
+            buildPath = path.join(src, build)
+            system("(cd " + buildPath + " && make)")
+    
+    def teardown(self):
         src = "src"
         build = "build"
         buildPath = path.join(src, build)
-        system("(cd " + buildPath + " && make)")
+        if len([name for name in listdir(buildPath) if path.isfile(path.join(buildPath, name))]) > 1:
+            system("(cd " + buildPath + " && make clean)")
 
     def test_test0(self):
+        self.teardown()
+        self.setup()
         test0 = path.join(self.dir, "test0.sjava")
         sjs = path.join(self.dir, "test0.sjava.s")
         sjo = path.join(self.dir, "test0.sjava.o")
@@ -43,6 +53,7 @@ class Test_sJava_Files(unittest.TestCase):
             remove(sjs)
 
     def test_test1(self):
+        self.setup()
         test1 = path.join(self.dir, "test1.sjava")
         sjs = path.join(self.dir, "test1.sjava.s")
         sjo = path.join(self.dir, "test1.sjava.o")
@@ -68,6 +79,7 @@ class Test_sJava_Files(unittest.TestCase):
             remove(sjs)
 
     def test_test2(self):
+        self.setup()
         test2 = path.join(self.dir, "test2.sjava")
         sjs = path.join(self.dir, "test2.sjava.s")
         sjo = path.join(self.dir, "test2.sjava.o")
@@ -93,6 +105,7 @@ class Test_sJava_Files(unittest.TestCase):
             remove(sjs)
 
     def test_test2_1(self):
+        self.setup()
         test2_1 = path.join(self.dir, "test2-1.sjava")
         sjs = path.join(self.dir, "test2-1.sjava.s")
         sjo = path.join(self.dir, "test2-1.sjava.o")
@@ -118,6 +131,7 @@ class Test_sJava_Files(unittest.TestCase):
             remove(sjs)
 
     def test_test3(self):
+        self.setup()
         test3 = path.join(self.dir, "test3.sjava")
         sjs = path.join(self.dir, "test3.sjava.s")
         sjo = path.join(self.dir, "test3.sjava.o")
@@ -143,6 +157,7 @@ class Test_sJava_Files(unittest.TestCase):
             remove(sjs)
 
     def test_test4(self):
+        self.setup()
         test4 = path.join(self.dir, "test4.sjava")
         sjs = path.join(self.dir, "test4.sjava.s")
         sjo = path.join(self.dir, "test4.sjava.o")
@@ -168,6 +183,7 @@ class Test_sJava_Files(unittest.TestCase):
             remove(sjs)
 
     def test_test4_1(self):
+        self.setup()
         test4_1 = path.join(self.dir, "test4-1.sjava")
         sjs = path.join(self.dir, "test4-1.sjava.s")
         sjo = path.join(self.dir, "test4-1.sjava.o")
@@ -193,6 +209,7 @@ class Test_sJava_Files(unittest.TestCase):
             remove(sjs)
 
     def test_test5(self):
+        self.setup()
         test5 = path.join(self.dir, "test5.sjava")
         sjs = path.join(self.dir, "test5.sjava.s")
         sjo = path.join(self.dir, "test5.sjava.o")
@@ -218,6 +235,7 @@ class Test_sJava_Files(unittest.TestCase):
             remove(sjs)
 
     def test_test6(self):
+        self.setup()
         test6 = path.join(self.dir, "test6.sjava")
         sjs = path.join(self.dir, "test6.sjava.s")
         sjo = path.join(self.dir, "test6.sjava.o")
@@ -244,6 +262,7 @@ class Test_sJava_Files(unittest.TestCase):
                 remove(sjs)
 
     def test_test7(self):
+        self.setup()
         test7 = path.join(self.dir, "test7.sjava")
         sjs = path.join(self.dir, "test7.sjava.s")
         sjo = path.join(self.dir, "test7.sjava.o")
@@ -269,6 +288,7 @@ class Test_sJava_Files(unittest.TestCase):
             remove(sjs)
 
     def test_test8(self):
+        self.setup()
         test8 = path.join(self.dir, "test8.sjava")
         sjs = path.join(self.dir, "test8.sjava.s")
         sjo = path.join(self.dir, "test8.sjava.o")
@@ -293,11 +313,7 @@ class Test_sJava_Files(unittest.TestCase):
                 remove(sjout)
             if path.isfile(sjs):
                 remove(sjs)
-    def __del__(self):
-        src = "src"
-        build = "build"
-        buildPath = path.join(src, build)
-        system("(cd " + buildPath + " && make clean)")
+        self.teardown()
 
 if __name__ == '__main__':
     unittest.main()

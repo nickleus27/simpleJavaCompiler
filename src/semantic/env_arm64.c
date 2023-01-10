@@ -349,8 +349,7 @@ int pushArgsOnStack(stack_env env, env_sizes mem_sizes){
 *   reset memTotals after this function is called
 */
 void generateArgStackMemory(stack_env env, int totalArgSize){
-    int savedRegs = 4*8;
-    //totalArgSize += savedRegs;
+    int savedRegs = 3*8;
     int offset_8 = 0,
     offset_4 = env->mem_sizes->size_8,
     offset_1 = offset_4 + env->mem_sizes->size_4;
@@ -420,8 +419,8 @@ void nextElem(stack_env env, stack_queue queue, stack element, int offset_8, int
 int generateStackMemory(stack_env env){
     /*calculate total memory to push on stack*/
     /*this needs to be 16 alignment */
-    /*this will be a combo of local vars, saved regs, and LR, FP, SP, AccSP32, AccSP64*/
-    int savedReg =  5*8; // 5 saved registers
+    /*this will be a combo of local vars, saved regs, and LR, FP, AccSP32, AccSP64*/
+    int savedReg =  4*8; // 4 saved registers
     int localFunctionScope = env->mem_sizes->size_1 + env->mem_sizes->size_4 + env->mem_sizes->size_8;
     int localMemTotal = savedReg + localFunctionScope;
     int i = 0;

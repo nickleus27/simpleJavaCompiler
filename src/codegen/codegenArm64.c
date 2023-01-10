@@ -422,11 +422,10 @@ void generateStatement(AATstatement tree) {
        * TODO: STACKFRAME REG OFFSET HERE!
        * 
        */
-      int localVarSize = tree->u.functionDef.framesize - 4*8; /* saving 5 registers so 5-1=4, SP starts om 0 offset*/
+      int localVarSize = tree->u.functionDef.framesize - 3*8; /* saving 4 registers so 4-1=3, offset starts on 0 */
       generateStatement(tree->u.functionDef.labels->u.sequential.left);
       /* assembly code fore saving registers and adjusting pointers*/
-      emit("mov %s, %s", Acc64(), SP());
-      emit("str %s, [%s, #-%d]!", Acc64(), SP(), tree->u.functionDef.framesize);
+      emit("add %s, %s, #-%d", SP(), SP(), tree->u.functionDef.framesize);
       emit("str %s, [%s, #%d]", FP(), SP(), localVarSize);
       emit("add %s, %s, #%d", FP(), SP(), localVarSize);
       emit("str %s, [%s, #%d]", ReturnAddr(), FP(), WORD);
@@ -438,8 +437,7 @@ void generateStatement(AATstatement tree) {
       emit("ldr %s, [%s, #%d]", AccSP32(), FP(), WORD*2);
       emit("ldr %s, [%s, #%d]", ReturnAddr(), FP(), WORD);
       emit("ldr %s, [%s]", FP(), FP());
-      emit("ldr %s, [%s]", Acc64(), SP());
-      emit("mov %s, %s", SP(), Acc64());
+      emit("add %s, %s, #%d", SP(), SP(), tree->u.functionDef.framesize);
       emit("ret");
     }
     break;
@@ -451,12 +449,10 @@ void generateStatement(AATstatement tree) {
        * move sp back up the size of argMemSize
        */
       if (tree->u.procedureCall.argMemSize){ // check if need to add args to stack
-        emit("mov %s, %s", Acc64(), SP());
-        emit("str %s, [%s, #-%d]!", Acc64(), SP(), tree->u.procedureCall.argMemSize);
+        emit("add %s, %s, #-%d", SP(), SP(), tree->u.procedureCall.argMemSize);
         addActualsToStack(tree->u.procedureCall.actuals);
         emit("bl %s", tree->u.procedureCall.jump);
-        emit("str %s, [%s]", Acc64(), SP());
-        emit("mov %s, %s", SP(), Acc64());
+        emit("add %s, %s, #%d", SP(), SP(), tree->u.procedureCall.argMemSize);
       } else {
         emit("bl %s", tree->u.procedureCall.jump);
       }
@@ -555,8 +551,8 @@ emit(".zerofill __DATA,__common,_free_list,8,3\n");
 void emitPrintInt(void) {
   /*print integer function*/
   emit("printInt:");
-  emit("\tmov x9, sp\n"
-    "\tstr x9, [sp, #-32]!//push down the stack\n"
+  emit(
+    "\tadd sp, sp, #-32   //push down the stack\n"
     "\tstr fp, [sp, #16]  //store fp\n"
     "\tstr lr, [sp, #24]  //store lr above fp\n"
     "\tadd fp, sp, #16    //store set fp for this frame\n"
@@ -633,8 +629,7 @@ void emitPrintInt(void) {
   emit("printIntEnd:");
   emit("\tldr lr, [fp, #8]  //restore registers\n"
     "\tldr fp, [fp]\n"
-    "\tldr x9, [sp]\n"
-    "\tmov sp, x9\n"
+    "\tadd sp, sp, #32\n"
     "\tret\n"
   );
 }

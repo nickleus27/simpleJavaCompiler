@@ -36,7 +36,7 @@ struct AATstatement_ {
       AATexpression lhs;
       AATexpression rhs;
       int size;
-    } move; /* TODO move needs an int size_type to check for proper move instruction */
+    } move;
     Label jump;
     struct {
       AATexpression test;

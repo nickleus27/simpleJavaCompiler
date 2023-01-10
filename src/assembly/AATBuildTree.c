@@ -15,17 +15,13 @@
 #include <stdlib.h>
 
 
-/*------------------> Expressions <------------------*/
+/*------------------ Expressions ------------------*/
 AATexpression Allocate(AATexpression size) {
   AATexpressionList actuals = AATExpressionList(size, NULL, REG32, 16);
   return AATFunctionCall("allocate",actuals, PTR, 32);
 }
 
 AATexpression ClassVariable(AATexpression base, int offset, int size_type){
-  /**
-   * TODO: Need to come back and check that the size_types are correct for registers and memory
-   * compatibility. Double check in analyzeVar in semantic.c too.
-   */
   if ( offset ) {
     return AATMemory( AATOperator(base, AATConstant(offset, REG64), AAT_PLUS, REG64), size_type);
   }
@@ -64,16 +60,12 @@ AATexpression OperatorExpression(AATexpression left, AATexpression right, AATope
   return AATOperator(left, right, operator, size_type);
 }
 
-/*------------------> Statements <------------------*/
+/*------------------ Statements ------------------*/
 AATstatement functionDefinition(AATstatement body, int framesize, Label start, Label end){
-  /* framesize * WORDSIZE + saved registers + (LR, FP, SP) */
-  //int localVarSize = framesize - 4*8; /* saving 5 registers so 5-1=4, SP starts om 0 offset*/
  return AATFunctionDef(AATSequential(AATLabel(start), AATLabel(end)), body, framesize);
 }
 
 AATstatement ReturnStatement(AATexpression value, Label functionend, int size_type){
-  /* need to check for size type to return?*/
-  /* need to make if statement for 32 bit and 64 bit*/
   if(size_type==PTR){
     return AATSequential(AATMove(AATRegister(Result64(), PTR), value, PTR), AATJump(functionend));
   }else if(size_type==INT){
