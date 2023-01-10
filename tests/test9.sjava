@@ -1,0 +1,17 @@
+int foo(int a, int b) {
+    return a + b;
+}
+int ten() {
+    return 10;
+}
+int five() {
+    return 5;
+}
+void main(){
+    printInt(
+        foo(
+            ten(), 
+            five()
+            )
+        );
+}
