@@ -275,8 +275,12 @@ void visitFormals(environment typeEnv, environment varEnv, typeList protoList, A
       /*  first adding pointer to function formal to env_arm64 for offset from SP when pushing args on stack from
       **  a function call...when a caller calls the funtion.
       **  need to enter pointer to variable from varEnv to env_arm4 which will be offset from FP in function*/
-      enter_arm64(argStack, 0/*args should always be scope=0*/, protoList->offset);
-      enter_arm64(functionStack, formalArg->u.varEntry.scope/*args should always be scope=0*/, formalArg->u.varEntry.offset);
+      if (protoList) {
+        enter_arm64(argStack, 0/*args should always be scope=0*/, protoList->offset);
+      }
+      if (formalArg) {
+        enter_arm64(functionStack, formalArg->u.varEntry.scope/*args should always be scope=0*/, formalArg->u.varEntry.offset);
+      }
     }
     if(formType && protoList){
       if ( formType->u.typeEntry.typ != protoList->first)

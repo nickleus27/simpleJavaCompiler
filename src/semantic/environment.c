@@ -156,7 +156,7 @@ void AddBuiltinTypes(environment env) {
 void AddBuiltinFunctions(environment env) {
   typeList formals = NULL;
   //enter(env, "Read", FunctionEntry(IntegerType(),NULL,"Read","Readend"));
-  enter(env, "printInt", FunctionEntry(VoidType(),TypeList(IntegerType(), NULL, 16),"printInt","printIntEnd"));
+  enter(env, "printInt", FunctionEntry(VoidType(),TypeList(IntegerType(), NULL, 8),"printInt","printIntEnd"));
   //enter(env, "Print", FunctionEntry(VoidType(), TypeList(IntegerType(), NULL),
 	//			    "Print","Printend"));
 }

@@ -64,6 +64,60 @@ void emit(char *assem,...) {
   fprintf(outfile,"\n");
 }
 
+void pushExp(AATexpression tree){
+  Register temp;
+  switch (tree->size_type/4){
+    case SWITCH_BYTE:
+      temp = pushExpReg32();
+      if (temp) {
+        emit("mov %s, %s", temp, Acc32());
+      }
+      break;
+    case SWITCH_REG32:
+      temp = pushExpReg32();
+      if (temp) {
+        emit("mov %s, %s", temp, Acc32());
+      }
+      break;
+    case SWITCH_REG64:
+    temp = pushExpReg64();
+      if (temp) {
+        emit("mov %s, %s", temp, Acc64());
+      }
+      break;
+    default:
+      emit("/*BAD PUSHEXP EXPRESSION*/\n");
+      break;
+  }
+}
+
+void popExp(AATexpression tree) {
+  Register temp;
+  switch (tree->size_type/4){
+    case SWITCH_BYTE:
+      temp = popExpReg32();
+      if (temp) {
+        emit("mov %s, %s", Tmp0_32(), temp);
+      }
+      break;
+    case SWITCH_REG32:
+      temp = popExpReg32();
+      if (temp) {
+        emit("mov %s, %s", Tmp0_32(), temp);
+      }
+      break;
+    case SWITCH_REG64:
+      temp = popExpReg64();
+      if (temp) {
+        emit("mov %s, %s", Tmp0_64(), temp);
+      }
+      break;
+    default:
+      emit("/*BAD POPEXP EXPRESSION*/\n");
+      break;
+  }
+}
+
 void generateExpression(AATexpression tree){
   switch (tree->kind) {
     case AAT_MEMORY:
@@ -89,23 +143,8 @@ void generateExpression(AATexpression tree){
   }
 }
 void generateLeftExp(AATexpression tree) {
-  switch(tree->size_type/4) {
-    case SWITCH_BYTE:
-      generateExpression(tree);
-      emit("str %s, [%s], #%d", Acc32(), AccSP32(), 0-HALFWORD);
-      break;
-    case SWITCH_REG32:
-      generateExpression(tree);
-      emit("str %s, [%s], #%d", Acc32(), AccSP32(), 0-HALFWORD);
-      break;
-    case SWITCH_REG64:
-      generateExpression(tree);
-      emit("str %s, [%s], #%d", Acc64(), AccSP64(), 0-WORD);
-      break;
-    default:
-      emit("/*BAD LEFT HAND EXPRESSION*/\n");
-      break;
-  }
+  generateExpression(tree);
+  pushExp(tree);
 }
 void generateRightExp(AATexpression tree) {
     switch(tree->size_type/4) {
@@ -193,9 +232,52 @@ void generateOpExp(AATexpression tree){
   }
 }
 
+void saveTempReg() {
+  int regs = getUsedRegs();
+  if (regs == 0) {
+    return;
+  }
+  int size = getUsedRegs() * 8;
+  while (size % 16) {
+    size++;
+  }
+  emit("sub %s, %s, #%d", SP(), SP(), size);
+  int offset = REG64 * (regs-1);
+  for (int i = 0; i < regs; i++) {
+    if (offset) {
+      emit("str %s, [%s, #%d]", getTempReg(i), SP(), offset);
+    } else {
+      emit("str %s, [%s]", getTempReg(i), SP());
+    }
+    offset-=8;
+  }
+}
+
+void restoreTempReg() {
+  int regs = getUsedRegs();
+  if (regs == 0) {
+    return;
+  }
+  int size = getUsedRegs() * 8;
+  while (size % 16) {
+    size++;
+  }
+  int offset = REG64 * (regs-1);
+  for (int i = 0; i < regs; i++) {
+    if (offset) {
+      emit("ldr %s, [%s, #%d]", getTempReg(i), SP(), offset);
+    } else {
+      emit("ldr %s, [%s]", getTempReg(i), SP());
+    }
+    offset-=8;
+  }
+  emit("add %s, %s, #%d", SP(), SP(), size);
+}
+
 void generateFunCall(AATexpression tree){
   switch(tree->size_type/4){// devide by 4 to minimize space 1/4==0, 4/4==1, 8/4==2
     case SWITCH_BYTE:
+      saveTempReg();
       if (tree->u.functionCall.argMemSize){
         emit("add %s, %s, #-%d", SP(), SP(), tree->u.functionCall.argMemSize);
         addActualsToStack(tree->u.functionCall.actuals);
@@ -206,8 +288,10 @@ void generateFunCall(AATexpression tree){
         emit("bl %s", tree->u.functionCall.jump);
         emit("mov %s, %s", Acc32(), Result32());
       }
+      restoreTempReg();
       break;
     case SWITCH_REG32:
+      saveTempReg();
       if (tree->u.functionCall.argMemSize){
         emit("add %s, %s, #-%d", SP(), SP(), tree->u.functionCall.argMemSize);
         addActualsToStack(tree->u.functionCall.actuals);
@@ -218,8 +302,10 @@ void generateFunCall(AATexpression tree){
         emit("bl %s", tree->u.functionCall.jump);
         emit("mov %s, %s", Acc32(), Result32());
       }
+      restoreTempReg();
       break;
     case SWITCH_REG64:
+      saveTempReg();
       if (tree->u.functionCall.argMemSize){
         emit("add %s, %s, #-%d", SP(), SP(), tree->u.functionCall.argMemSize);
         addActualsToStack(tree->u.functionCall.actuals);
@@ -230,6 +316,7 @@ void generateFunCall(AATexpression tree){
         emit("bl %s", tree->u.functionCall.jump);
         emit("mov %s, %s", Acc64(), Result64());
       }
+      restoreTempReg();
       break;
     default:
       emit("/*BAD FUNCTION CALL EXPRESSION*/\n");
@@ -238,11 +325,9 @@ void generateFunCall(AATexpression tree){
 }
 
 void generateOpExp64(AATexpression tree){
+  popExp(tree);
   if (tree->u.operator.left->size_type == REG32) { //if size types dont match
-    emit("ldr %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD);
     emit("sxtw %s, %s", Tmp0_64(), Tmp0_32());
-  } else {
-    emit("ldr %s, [%s, #%d]!", Tmp0_64(), AccSP64(), WORD);
   }
   if (tree->u.operator.right->size_type == REG32) {
     emit("sxtw %s, %s", Acc64(), Acc32());
@@ -313,66 +398,57 @@ void generateOpExp32(AATexpression tree){
       emit("ldr %s, [%s, #%d]", Tmp0_32(), AccSP32(), WORD);
       emit("ldr %s, [%s, #%d]", Tmp1_32(), AccSP32(), HALFWORD);
       */
+  popExp(tree);
   switch (tree->u.operator.op){
     case AAT_PLUS:
-      emit("ldr %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD);
       emit("add %s, %s, %s", Acc32(), Tmp0_32(), Acc32());
       break;
     case AAT_MINUS:
-      emit("ldr %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD);
       emit("sub %s, %s, %s", Acc32(), Tmp0_32(), Acc32());
       break;
     case AAT_MULTIPLY:
-      emit("ldr %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD);
       emit("mul %s, %s, %s", Acc32(), Tmp0_32(), Acc32());
       break;
     case AAT_DIVIDE:
       /**
      * TODO: Need to add code to throw error when dividing by ZERO
      */
-      emit("ldr %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD);
       emit("sdiv %s, %s, %s", Acc32(), Tmp0_32(), Acc32());
       break;
     case AAT_LT:
-      emit("ldr %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD);
       emit("cmp %s, %s", Tmp0_32(), Acc32());
       emit("cset %s, lt", Acc32());
       break;
     case AAT_GT:
-      emit("ldr %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD);
       emit("cmp %s, %s", Tmp0_32(), Acc32());
       emit("cset %s, gt", Acc32());
       break;
     case AAT_LEQ:
-      emit("ldr %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD);
       emit("cmp %s, %s", Tmp0_32(), Acc32());
       emit("cset %s, le", Acc32());
       break;
     case AAT_GEQ:
-      emit("ldr %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD);
       emit("cmp %s, %s", Tmp0_32(), Acc32());
       emit("cset %s, ge", Acc32());
       break;
     case AAT_EQ:
-      emit("ldr %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD);
       emit("cmp %s, %s", Tmp0_32(), Acc32());
       emit("cset %s, eq", Acc32());
       break;
     case AAT_NEQ:
-      emit("ldr %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD);
       emit("cmp %s, %s", Tmp0_32(), Acc32());
       emit("cset %s, ne", Acc32());
       break;
     case AAT_AND:
-      emit("ldrb %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD);
+      //emit("ldrb %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD);
       emit("and %s, %s, %s", Acc32(), Tmp0_32(), Acc32());
       break;
     case AAT_OR:
-      emit("ldrb %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD);
+      //emit("ldrb %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD);
       emit("orr %s, %s, %s", Acc32(), Tmp0_32(), Acc32());
       break;
     case AAT_NOT:
-      emit("ldrb %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD); // Tmp0 == #2
+      //emit("ldrb %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD); // Tmp0 == #2
       emit("mvn %s, %s", Acc32(), Acc32()); //Acc32 == boolean value, move NOT boolean value
       emit("add %s, %s, %s", Acc32(), Tmp0_32(), Acc32()); // add #2 to inverted value to get 0 | 1
     break;
@@ -388,7 +464,7 @@ void addActualsToStack(AATexpressionList actual){
     case(SWITCH_BYTE):
     {
       generateExpression(actual->first);
-      emit("str %s, [%s, #%d]", Acc32(), SP(), actual->offset);
+      emit("strb %s, [%s, #%d]", Acc32(), SP(), actual->offset);
     }break;
     case(SWITCH_REG32):
     {
@@ -422,19 +498,15 @@ void generateStatement(AATstatement tree) {
        * TODO: STACKFRAME REG OFFSET HERE!
        * 
        */
-      int localVarSize = tree->u.functionDef.framesize - 3*8; /* saving 4 registers so 4-1=3, offset starts on 0 */
+      int localVarSize = tree->u.functionDef.framesize - 2*8; /* saving 2 reegisters lr, fp */
       generateStatement(tree->u.functionDef.labels->u.sequential.left);
       /* assembly code fore saving registers and adjusting pointers*/
       emit("add %s, %s, #-%d", SP(), SP(), tree->u.functionDef.framesize);
       emit("str %s, [%s, #%d]", FP(), SP(), localVarSize);
       emit("add %s, %s, #%d", FP(), SP(), localVarSize);
       emit("str %s, [%s, #%d]", ReturnAddr(), FP(), WORD);
-      emit("str %s, [%s, #%d]", AccSP32(), FP(), WORD*2);
-      emit("str %s, [%s, #%d]", AccSP64(), FP(), WORD*3);
       generateStatement(tree->u.functionDef.body);
       generateStatement(tree->u.functionDef.labels->u.sequential.right);
-      emit("ldr %s, [%s, #%d]", AccSP64(), FP(), WORD*3);
-      emit("ldr %s, [%s, #%d]", AccSP32(), FP(), WORD*2);
       emit("ldr %s, [%s, #%d]", ReturnAddr(), FP(), WORD);
       emit("ldr %s, [%s]", FP(), FP());
       emit("add %s, %s, #%d", SP(), SP(), tree->u.functionDef.framesize);
@@ -448,6 +520,7 @@ void generateStatement(AATstatement tree) {
        * bl startLabel
        * move sp back up the size of argMemSize
        */
+      saveTempReg();
       if (tree->u.procedureCall.argMemSize){ // check if need to add args to stack
         emit("add %s, %s, #-%d", SP(), SP(), tree->u.procedureCall.argMemSize);
         addActualsToStack(tree->u.procedureCall.actuals);
@@ -456,6 +529,7 @@ void generateStatement(AATstatement tree) {
       } else {
         emit("bl %s", tree->u.procedureCall.jump);
       }
+      restoreTempReg();
       break;
     case AAT_SEQ:
       generateStatement(tree->u.sequential.left);
@@ -487,15 +561,15 @@ void generateMove(AATstatement tree) {
     }
   } else if (tree->u.move.lhs->kind == AAT_MEMORY) {
       generateExpression(tree->u.move.lhs->u.memory);//bypass dereference value @ mem addresss & just get address
-      emit("str %s, [%s], #%d", Acc64(), AccSP64(), 0-WORD);//store address on Expression Stack
+      pushExp(tree->u.move.lhs->u.memory); //memory will have size type 8 bytes
       generateExpression(tree->u.move.rhs);
-      emit("ldr %s, [%s, #%d]!", Tmp0_64(), AccSP64(), WORD);
+      popExp(tree->u.move.lhs->u.memory); //memory to pop address back into xn register
     if(tree->u.move.size == REG32){
       emit("str %s, [%s]", Acc32(), Tmp0_64()); //implement move
     }else if (tree->u.move.size == REG64 ){
       emit("str %s, [%s]", Acc64(), Tmp0_64()); //implement move
     }else if (tree->u.move.size == BYTE ){
-      emit("str %s, [%s]", Acc32(), Tmp0_64()); //implement move
+      emit("strb %s, [%s]", Acc32(), Tmp0_64()); //implement move
     }
   } else {
     fprintf(stderr,"Bad MOVE node -- LHS should be T_mem or T_register\n");
@@ -521,14 +595,7 @@ void emitSetupCode(void) {
   emit(".dword 0");
   emit(".text");
   emit("_start:");
-  emit("mov %s, #0", FP());
-  emit("add %s, %s, #-%d", SP(), SP(), EXPR_STACKSIZE);
-  emit("mov %s, %s", Tmp0_64(), SP());
-  emit("str %s, [%s]", Tmp0_64(), SP());
-  emit("add %s, %s, #%d", AccSP64(), Tmp0_64(), 4072);
-  emit("str %s, [%s, #%d]", FP(), AccSP64(), WORD);
-  emit("str %s, [%s, #%d]", ReturnAddr(), AccSP64(), 2*WORD);
-  emit("add %s, %s, %#-d", AccSP32(), AccSP64(), 2036);
+  emit("mov %s, #%d", FP(), 0);
   emit("bl main1");
   /* how to push args on the stack for main? */
   emit("mov X0, #0");
@@ -556,7 +623,7 @@ void emitPrintInt(void) {
     "\tstr fp, [sp, #16]  //store fp\n"
     "\tstr lr, [sp, #24]  //store lr above fp\n"
     "\tadd fp, sp, #16    //store set fp for this frame\n"
-    "\tldr w9, [fp, #32]  //get integer from arg stack space\n"
+    "\tldr w9, [fp, #24]  //get integer from arg stack space\n"
     "\tstr w9, [fp, #-4]  //store integer in local var space\n"
 
     "\t/*check for negative value*/\n"
@@ -635,50 +702,6 @@ void emitPrintInt(void) {
 }
 
 void emitAllocate(void) {
-  /*
-  emit("allocate:");
-  emit("\t//function start\n"
-    "\tmov x9, sp\n"
-    "\tstr x9, [sp, #-32]!//push down the stack\n"
-    "\tstr fp, [sp, #16]  //store fp\n"
-    "\tstr lr, [sp, #24]  //store lr above fp\n"
-    "\tadd fp, sp, #16    //store set fp for this frame\n"
-
-    "\tldr w12, [FP, #32]  // get size arg from params 32 bit size\n"
-    "\tsxtw x12, w12    //transfer 32bit to 64bit for memory access\n"
-    "\tmov x14, #16 //used in heap_size_test loop\n"
-    "\tb heap_size_test\n"
-  );
-  emit("heap_size_start:");
-  emit("add x12, x12, #1");
-  emit("heap_size_test:");
-  emit("\tsdiv x13, x12, x14\n"
-    "\tmul x13, x13, x14\n"
-    "\tsub x13, x12, x13\n"
-    "\tcmp x13, #0\n"
-    "\tb.ne heap_size_start\n"
-
-    "\tADRP x10, heap_ptr@PAGE   //get address of heap ptr\n"
-    "\tADD	x10, x10, heap_ptr@PAGEOFF\n" 
-    "\tldr x11, [x10]      // deref address\n"
-    "\tcmp x11, #0         // check if heap ptr has been init (if heap ptr == 0)\n"
-    "\tb.ne alloc_init_skip// skip initialize heap ptr\n"
-    "\tadd x11, x10, #16   // offset address by 16 so heap_ptr is not overwritten\n"
-  );
-  emit("alloc_init_skip:");
-  emit("\t// here is where allocate memory\n"
-    "\tadd x11, x11, x12   // add size offset to heap_ptr\n"
-    "\tstr x11, [x10]      // update heap_ptr\n"
-    "\t//function end\n"
-    "\tmov x0, x11         // return ptr to allocated mem\n"
-    "\tldr lr, [fp, #8]    // restore registers\n"
-    "\tldr fp, [fp]\n"
-    "\tldr x9, [sp]\n"
-    "\tmov sp, x9\n"
-    "\tret\n"
-  );
-  */
-
 emit("allocate:                              ; @allocate");
 emit("; %%bb.0:");
 emit("\tsub\tsp, sp, #96");

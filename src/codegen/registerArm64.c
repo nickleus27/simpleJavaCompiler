@@ -8,7 +8,9 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include "registerArm64.h"
+#define EXP_REGISTERS 5
 
 
 Register R_fp = NULL;
@@ -18,18 +20,27 @@ Register R_result64 = NULL;
 Register R_return = NULL;
 Register R_acc32 = NULL;
 Register R_acc64 = NULL;
-Register R_accSPbytes = NULL;
-Register R_accSP32 = NULL;
-Register R_accSP64 = NULL;
 Register R_zero = NULL;
 Register R32_tmp0 = NULL;
 Register R32_tmp1 = NULL;
 Register R32_tmp2 = NULL;
+Register R32_tmp3 = NULL;
+Register R32_tmp4 = NULL;
+Register R32_tmp5 = NULL;
 Register R64_tmp0 = NULL;
 Register R64_tmp1 = NULL;
+Register R64_tmp2 = NULL;
+Register R64_tmp3 = NULL;
+Register R64_tmp4 = NULL;
+Register R64_tmp5 = NULL;
+ExpStack expStack = NULL;
 
-
-
+struct ExpStack_{
+  int index;
+  int offset;
+  Register expStack32[EXP_REGISTERS];
+  Register expStack64[EXP_REGISTERS];
+};
 
 Register FP(void) {
   if (R_fp == NULL) {
@@ -116,6 +127,27 @@ Register Tmp2_32(void) {
   }
   return R32_tmp2;
 }
+Register Tmp3_32(void){
+  if (R32_tmp3 == NULL) {
+    R32_tmp3 = (char *) malloc(sizeof(char)*4);
+    strcpy(R32_tmp3,"w13");
+  } 
+  return R32_tmp3;
+}
+Register Tmp4_32(void) {
+  if (R32_tmp4 == NULL) {
+    R32_tmp4 = (char *) malloc(sizeof(char)*4);
+    strcpy(R32_tmp4,"w14");
+  }
+  return R32_tmp4;
+}
+Register Tmp5_32(void) {
+  if (R32_tmp5 == NULL) {
+    R32_tmp5 = (char *) malloc(sizeof(char)*4);
+    strcpy(R32_tmp5,"w15");
+  }
+  return R32_tmp5;
+}
 Register Tmp0_64(void) {
   if (R64_tmp0 == NULL) {
     R64_tmp0 = (char *) malloc(sizeof(char)*4);
@@ -130,31 +162,104 @@ Register Tmp1_64(void) {
   }
   return R64_tmp1;
 }
-Register AccSP32(void) {
-  if (R_accSP32 == NULL) {
-    R_accSP32 = (Register) malloc(sizeof(*R_accSP32));
-    R_accSP32 = (char *) malloc(sizeof(char)*4);
-    strcpy(R_accSP32,"x23");
+Register Tmp2_64(void) {
+  if (R64_tmp2 == NULL) {
+    R64_tmp2 = (char *) malloc(sizeof(char)*4);
+    strcpy(R64_tmp2,"x12");
   }
-  return R_accSP32;
+  return R64_tmp2;
+}
+Register Tmp3_64(void) {
+  if (R64_tmp3 == NULL) {
+    R64_tmp3 = (char *) malloc(sizeof(char)*4);
+    strcpy(R64_tmp3,"x13");
+  }
+  return R64_tmp3;
+}
+Register Tmp4_64(void) {
+  if (R64_tmp4 == NULL) {
+    R64_tmp4 = (char *) malloc(sizeof(char)*4);
+    strcpy(R64_tmp4,"x14");
+  }
+  return R64_tmp4;
+}
+Register Tmp5_64(void) {
+  if (R64_tmp5 == NULL) {
+    R64_tmp5 = (char *) malloc(sizeof(char)*4);
+    strcpy(R64_tmp5,"x15");
+  }
+  return R64_tmp5;
 }
 
-Register AccSPbytes(){
-  if (R_accSPbytes == NULL) {
-    R_accSPbytes = (Register) malloc(sizeof(*R_accSPbytes));
-    R_accSPbytes = (char *) malloc(sizeof(char)*4);
-    strcpy(R_accSPbytes,"x24");
+ExpStack getExpStack() {
+  if (expStack == NULL) {
+    expStack = (ExpStack)malloc(sizeof(struct ExpStack_));
+    expStack->index = 0;
+    expStack->offset = 8;
+    expStack->expStack32[0] = Tmp1_32();
+    expStack->expStack32[1] = Tmp2_32();
+    expStack->expStack32[2] = Tmp3_32();
+    expStack->expStack32[3] = Tmp4_32();
+    expStack->expStack32[4] = Tmp5_32();
+    expStack->expStack64[0] = Tmp1_64();
+    expStack->expStack64[1] = Tmp2_64();
+    expStack->expStack64[2] = Tmp3_64();
+    expStack->expStack64[3] = Tmp4_64();
+    expStack->expStack64[4] = Tmp5_64();
   }
-  return R_accSPbytes;
+  return expStack;
 }
 
-Register AccSP64(void) {
-  if (R_accSP64 == NULL) {
-    R_accSP64 = (Register) malloc(sizeof(*R_accSP64));
-    R_accSP64 = (char *) malloc(sizeof(char)*4);
-    strcpy(R_accSP64,"x22");
+Register pushExpReg32() {
+  ExpStack exp = getExpStack();
+  if (exp->index<EXP_REGISTERS) {
+    return exp->expStack32[exp->index++];
   }
-  return R_accSP64;
+  exp->index++;
+  printf("RAN OUT OF REGISTER FOR EXPRESSION STACK");
+  return NULL;
 }
 
-   
+Register pushExpReg64() {
+  ExpStack exp = getExpStack();
+  if (exp->index<EXP_REGISTERS) {
+    return exp->expStack64[exp->index++];
+  }
+  exp->index++;
+  printf("RAN OUT OF REGISTER FOR EXPRESSION STACK");
+  return NULL;
+
+}
+
+Register popExpReg32() {
+  ExpStack exp = getExpStack();
+  exp->index--;
+  if (exp->index<EXP_REGISTERS) {
+    return exp->expStack32[exp->index];
+  }
+    printf("NO REGISTERS32 TO POP FROM EXPRESSION STACK");
+  return NULL;
+}
+
+Register popExpReg64() {
+  ExpStack exp = getExpStack();
+  exp->index--;
+  if (exp->index<EXP_REGISTERS) {
+    return exp->expStack64[exp->index];
+  }
+  printf("NO REGISTERS64 TO POP FROM EXPRESSION STACK");
+  return NULL;
+}
+
+Register getTempReg(int index) {
+  ExpStack exp = getExpStack();
+  return exp->expStack64[index];
+}
+
+int getUsedRegs() {
+  ExpStack exp = getExpStack();
+  if (exp->index <= EXP_REGISTERS) {
+    return exp->index;
+  }
+  return EXP_REGISTERS;
+}

@@ -253,21 +253,21 @@ void nextArgElem(stack_env env, stack_queue queue, stack element, int offset_8, 
                 case(PTR):
                 {
                     offset_8 += 8;
-                    element->u.var.offset->offset =  (totalArgSize - offset_8)+ PTR + savedReg; //updating integer pointer
+                    element->u.var.offset->offset =  (totalArgSize - offset_8) + savedReg; //updating integer pointer
                     nextArgElem(env, queue, element->next, offset_8, offset_4, offset_1, totalArgSize, savedReg);
                     offset_8-=8; //remove offset from as leaving the scope
                 }break;
                 case(INT):
                 {
                     offset_4 += 4;
-                    element->u.var.offset->offset =  (totalArgSize - offset_4)+ INT + savedReg;//offset will always be negative below fp
+                    element->u.var.offset->offset =  (totalArgSize - offset_4) + savedReg;
                     nextArgElem(env, queue, element->next, offset_8, offset_4, offset_1, totalArgSize, savedReg);
                     offset_4-=4;
                 }break;
                 case(BOOL):
                 {
                     offset_1 += 1;
-                    element->u.var.offset->offset =  (totalArgSize - offset_1)+ BOOL + savedReg; //offset will always be negative below fp
+                    element->u.var.offset->offset =  (totalArgSize - offset_1) + savedReg;
                     nextArgElem(env, queue, element->next, offset_8, offset_4, offset_1, totalArgSize, savedReg);
                     offset_1-=1;
                 }break;
@@ -331,6 +331,7 @@ void generateClassMemory(stack_env env, env_sizes mem_sizes) {
 *   offset will be 0 after moving SP down totalArgSize 
 *   offset will be offset + SP*/
 int pushArgsOnStack(stack_env env, env_sizes mem_sizes){
+    int savedRegs = 0; //offset is from sp after it is push down
     int totalArgSize = mem_sizes->size_1 + mem_sizes->size_4 + mem_sizes->size_8;
     while(totalArgSize%16) totalArgSize++;
     int offset_8 = 0,
@@ -338,7 +339,7 @@ int pushArgsOnStack(stack_env env, env_sizes mem_sizes){
     offset_1 = offset_4 + mem_sizes->size_4;
     //while(env->vector[0])//args are stored in scope0
     if ( env->vector[0] ) {
-        nextArgElem(env, env->vector[0], env->vector[0]->first, offset_8, offset_4, offset_1, totalArgSize, 0);
+        nextArgElem(env, env->vector[0], env->vector[0]->first, offset_8, offset_4, offset_1, totalArgSize, savedRegs);
     }
     free(mem_sizes);
    return totalArgSize;
@@ -349,7 +350,7 @@ int pushArgsOnStack(stack_env env, env_sizes mem_sizes){
 *   reset memTotals after this function is called
 */
 void generateArgStackMemory(stack_env env, int totalArgSize){
-    int savedRegs = 3*8;
+    int savedRegs = 2*8; // lr, and fp
     int offset_8 = 0,
     offset_4 = env->mem_sizes->size_8,
     offset_1 = offset_4 + env->mem_sizes->size_4;
@@ -419,8 +420,8 @@ void nextElem(stack_env env, stack_queue queue, stack element, int offset_8, int
 int generateStackMemory(stack_env env){
     /*calculate total memory to push on stack*/
     /*this needs to be 16 alignment */
-    /*this will be a combo of local vars, saved regs, and LR, FP, AccSP32, AccSP64*/
-    int savedReg =  4*8; // 4 saved registers
+    /*this will be a combo of local vars, saved regs, and LR, FP*/
+    int savedReg =  2*8; // 2 saved registers
     int localFunctionScope = env->mem_sizes->size_1 + env->mem_sizes->size_4 + env->mem_sizes->size_8;
     int localMemTotal = savedReg + localFunctionScope;
     int i = 0;
