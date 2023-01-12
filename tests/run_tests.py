@@ -316,22 +316,22 @@ class Test_sJava_Files(unittest.TestCase):
 
     def test_test9(self):
         self.setup()
-        test8 = path.join(self.dir, "test9.sjava")
+        test9 = path.join(self.dir, "test9.sjava")
         sjs = path.join(self.dir, "test9.sjava.s")
         sjo = path.join(self.dir, "test9.sjava.o")
         sjout = path.join(self.dir, "test9.sjava.out")
-        tmp8 = path.join(self.dir, "temp9.txt")
+        tmp9 = path.join(self.dir, "temp9.txt")
         test_txt = path.join(self.dir, "test9.txt")
-        if path.isfile(test8):
-            exitStatus = run([self.sjc_exe, test8]).returncode
+        if path.isfile(test9):
+            exitStatus = run([self.sjc_exe, test9]).returncode
             self.assertEqual(exitStatus, 0)
             if path.isfile(sjout):
-                with open(tmp8, 'w') as outfile:
+                with open(tmp9, 'w') as outfile:
                     run(path.join(self.exe, sjout), stdout=outfile)
                     outfile.close()
-            if path.isfile(tmp8):
-                self.assertTrue(filecmp.cmp(tmp8, test_txt))
-                remove(tmp8)
+            if path.isfile(tmp9):
+                self.assertTrue(filecmp.cmp(tmp9, test_txt))
+                remove(tmp9)
             else:
                 self.assertTrue(False)
             if path.isfile(sjo):
@@ -340,24 +340,25 @@ class Test_sJava_Files(unittest.TestCase):
                 remove(sjout)
             if path.isfile(sjs):
                 remove(sjs)
+
     def test_test10(self):
         self.setup()
-        test8 = path.join(self.dir, "test10.sjava")
+        test10 = path.join(self.dir, "test10.sjava")
         sjs = path.join(self.dir, "test10.sjava.s")
         sjo = path.join(self.dir, "test10.sjava.o")
         sjout = path.join(self.dir, "test10.sjava.out")
-        tmp8 = path.join(self.dir, "temp10.txt")
+        tmp10 = path.join(self.dir, "temp10.txt")
         test_txt = path.join(self.dir, "test10.txt")
-        if path.isfile(test8):
-            exitStatus = run([self.sjc_exe, test8]).returncode
+        if path.isfile(test10):
+            exitStatus = run([self.sjc_exe, test10]).returncode
             self.assertEqual(exitStatus, 0)
             if path.isfile(sjout):
-                with open(tmp8, 'w') as outfile:
+                with open(tmp10, 'w') as outfile:
                     run(path.join(self.exe, sjout), stdout=outfile)
                     outfile.close()
-            if path.isfile(tmp8):
-                self.assertTrue(filecmp.cmp(tmp8, test_txt))
-                remove(tmp8)
+            if path.isfile(tmp10):
+                self.assertTrue(filecmp.cmp(tmp10, test_txt))
+                remove(tmp10)
             else:
                 self.assertTrue(False)
             if path.isfile(sjo):
