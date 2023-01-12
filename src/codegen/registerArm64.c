@@ -37,7 +37,6 @@ ExpStack expStack = NULL;
 
 struct ExpStack_{
   int index;
-  int offset;
   Register expStack32[EXP_REGISTERS];
   Register expStack64[EXP_REGISTERS];
 };
@@ -195,7 +194,6 @@ ExpStack getExpStack() {
   if (expStack == NULL) {
     expStack = (ExpStack)malloc(sizeof(struct ExpStack_));
     expStack->index = 0;
-    expStack->offset = 8;
     expStack->expStack32[0] = Tmp1_32();
     expStack->expStack32[1] = Tmp2_32();
     expStack->expStack32[2] = Tmp3_32();
@@ -216,7 +214,6 @@ Register pushExpReg32() {
     return exp->expStack32[exp->index++];
   }
   exp->index++;
-  printf("RAN OUT OF REGISTER FOR EXPRESSION STACK");
   return NULL;
 }
 
@@ -226,7 +223,6 @@ Register pushExpReg64() {
     return exp->expStack64[exp->index++];
   }
   exp->index++;
-  printf("RAN OUT OF REGISTER FOR EXPRESSION STACK");
   return NULL;
 
 }
@@ -237,7 +233,6 @@ Register popExpReg32() {
   if (exp->index<EXP_REGISTERS) {
     return exp->expStack32[exp->index];
   }
-    printf("NO REGISTERS32 TO POP FROM EXPRESSION STACK");
   return NULL;
 }
 
@@ -247,7 +242,6 @@ Register popExpReg64() {
   if (exp->index<EXP_REGISTERS) {
     return exp->expStack64[exp->index];
   }
-  printf("NO REGISTERS64 TO POP FROM EXPRESSION STACK");
   return NULL;
 }
 

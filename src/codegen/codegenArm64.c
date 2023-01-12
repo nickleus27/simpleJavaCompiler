@@ -19,7 +19,10 @@
 #define SWITCH_REG32 REG32/4
 #define SWITCH_REG64 REG64/4
 
+/* global variables */
 FILE *outfile;
+int exp_stack_offset;
+
 /* statement generation */
 void generateStatement(AATstatement tree);
 void generateMove(AATstatement tree);
@@ -47,6 +50,7 @@ void emitSetupCode(void);
 
 
 void generateCode(AATstatement tree, FILE *output) {
+  exp_stack_offset = 0;
   outfile = output; 
   emitSetupCode();
   generateStatement(tree);
@@ -64,25 +68,60 @@ void emit(char *assem,...) {
   fprintf(outfile,"\n");
 }
 
+void pushExpStack() {
+  if (exp_stack_offset == 0) {
+    exp_stack_offset = 8;
+    emit("sub %s, %s, #%d", SP(), SP(), QWORD);
+  } else {
+    exp_stack_offset -= 8;
+  }
+  //int offset = popExpStackOffset();
+  if (exp_stack_offset) {
+    emit("str %s, [%s, #%d]", Acc64(), SP(), exp_stack_offset);
+  } else {
+    emit("str %s, [%s]", Acc64(), SP());
+  }
+}
+
+void popExpStack() {
+  if (exp_stack_offset) {
+    emit("ldr %s, [%s, #%d]", Tmp0_64(), SP(), exp_stack_offset);
+  } else {
+    emit("ldr %s, [%s]", Tmp0_64(), SP());
+  }
+  if (exp_stack_offset == 8) {
+    emit("add %s, %s, #%d", SP(), SP(), QWORD);
+    exp_stack_offset = 0;
+  } else {
+    exp_stack_offset += 8;
+  }
+}
+
 void pushExp(AATexpression tree){
-  Register temp;
+  Register tempReg;
   switch (tree->size_type/4){
     case SWITCH_BYTE:
-      temp = pushExpReg32();
-      if (temp) {
-        emit("mov %s, %s", temp, Acc32());
+      tempReg = pushExpReg32();
+      if (tempReg) {
+        emit("mov %s, %s", tempReg, Acc32());
+      } else {
+        pushExpStack();
       }
       break;
     case SWITCH_REG32:
-      temp = pushExpReg32();
-      if (temp) {
-        emit("mov %s, %s", temp, Acc32());
+      tempReg = pushExpReg32();
+      if (tempReg) {
+        emit("mov %s, %s", tempReg, Acc32());
+      } else {
+        pushExpStack();
       }
       break;
     case SWITCH_REG64:
-    temp = pushExpReg64();
-      if (temp) {
-        emit("mov %s, %s", temp, Acc64());
+    tempReg = pushExpReg64();
+      if (tempReg) {
+        emit("mov %s, %s", tempReg, Acc64());
+      } else {
+        pushExpStack();
       }
       break;
     default:
@@ -92,24 +131,30 @@ void pushExp(AATexpression tree){
 }
 
 void popExp(AATexpression tree) {
-  Register temp;
+  Register tempReg;
   switch (tree->size_type/4){
     case SWITCH_BYTE:
-      temp = popExpReg32();
-      if (temp) {
-        emit("mov %s, %s", Tmp0_32(), temp);
+      tempReg = popExpReg32();
+      if (tempReg) {
+        emit("mov %s, %s", Tmp0_32(), tempReg);
+      } else {
+        popExpStack();
       }
       break;
     case SWITCH_REG32:
-      temp = popExpReg32();
-      if (temp) {
-        emit("mov %s, %s", Tmp0_32(), temp);
+      tempReg = popExpReg32();
+      if (tempReg) {
+        emit("mov %s, %s", Tmp0_32(), tempReg);
+      } else {
+        popExpStack();
       }
       break;
     case SWITCH_REG64:
-      temp = popExpReg64();
-      if (temp) {
-        emit("mov %s, %s", Tmp0_64(), temp);
+      tempReg = popExpReg64();
+      if (tempReg) {
+        emit("mov %s, %s", Tmp0_64(), tempReg);
+      } else {
+        popExpStack();
       }
       break;
     default:
@@ -394,10 +439,6 @@ void generateOpExp64(AATexpression tree){
 }
 
 void generateOpExp32(AATexpression tree){
-    /** REFACTOR THIS HERE AND RESTORE BELOW SWITCH AND REMOVE REDUNCDANT CODE
-      emit("ldr %s, [%s, #%d]", Tmp0_32(), AccSP32(), WORD);
-      emit("ldr %s, [%s, #%d]", Tmp1_32(), AccSP32(), HALFWORD);
-      */
   popExp(tree);
   switch (tree->u.operator.op){
     case AAT_PLUS:
@@ -440,15 +481,12 @@ void generateOpExp32(AATexpression tree){
       emit("cset %s, ne", Acc32());
       break;
     case AAT_AND:
-      //emit("ldrb %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD);
       emit("and %s, %s, %s", Acc32(), Tmp0_32(), Acc32());
       break;
     case AAT_OR:
-      //emit("ldrb %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD);
       emit("orr %s, %s, %s", Acc32(), Tmp0_32(), Acc32());
       break;
     case AAT_NOT:
-      //emit("ldrb %s, [%s, #%d]!", Tmp0_32(), AccSP32(), HALFWORD); // Tmp0 == #2
       emit("mvn %s, %s", Acc32(), Acc32()); //Acc32 == boolean value, move NOT boolean value
       emit("add %s, %s, %s", Acc32(), Tmp0_32(), Acc32()); // add #2 to inverted value to get 0 | 1
     break;
@@ -504,10 +542,10 @@ void generateStatement(AATstatement tree) {
       emit("add %s, %s, #-%d", SP(), SP(), tree->u.functionDef.framesize);
       emit("str %s, [%s, #%d]", FP(), SP(), localVarSize);
       emit("add %s, %s, #%d", FP(), SP(), localVarSize);
-      emit("str %s, [%s, #%d]", ReturnAddr(), FP(), WORD);
+      emit("str %s, [%s, #%d]", ReturnAddr(), FP(), DWORD);
       generateStatement(tree->u.functionDef.body);
       generateStatement(tree->u.functionDef.labels->u.sequential.right);
-      emit("ldr %s, [%s, #%d]", ReturnAddr(), FP(), WORD);
+      emit("ldr %s, [%s, #%d]", ReturnAddr(), FP(), DWORD);
       emit("ldr %s, [%s]", FP(), FP());
       emit("add %s, %s, #%d", SP(), SP(), tree->u.functionDef.framesize);
       emit("ret");
