@@ -16,9 +16,9 @@
     #define REG64 8
     #define REG32 4
     #define BYTE 1
-    #define WORD 8
-    #define HALFWORD 4
-    #define EXPR_STACKSIZE 2048
+    #define WORD 4
+    #define DWORD 8
+    #define QWORD 16
 #endif
 
 #if defined (MIPS)

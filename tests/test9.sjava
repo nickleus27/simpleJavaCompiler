@@ -1,17 +1,20 @@
 int foo(int a, int b) {
-    return a + b;
-}
-int ten() {
-    return 10;
+    return a+b;
 }
 int five() {
     return 5;
 }
+int ten() {
+    return 10;
+}
+void argTest(int a, int b, int c, boolean d, boolean e) {
+    if (d && e) {
+        printInt(a+b+c);
+    } else {
+        printInt(-1);
+    }
+}
 void main(){
-    printInt(
-        foo(
-            ten(), 
-            five()
-            )
-        );
+    printInt(foo(five(), ten()));
+    argTest(10, 100, 1000, true, true);
 }
