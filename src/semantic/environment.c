@@ -16,6 +16,7 @@
 #include "type.h"
 #include "environment2.h"
 #include "../codegen/MachineDependent.h"
+#include "../lib/offset_ref.h"
 /* Use a reasonable (PRIME!) hash table size */
 #define HASHTABLESIZE 503
 
@@ -50,6 +51,56 @@ env_sizes memTotals = NULL;
 
 /* Function Definitions */
 
+void freeVarEnv(environment env) {
+  while(env->stack) {
+    stackElem temp = env->stack;
+    env->stack = env->stack->next;
+    envEntry var = find(env, temp->key);
+    H_delete(env->table,temp->key);
+    OFFSET_REF_DEC(var->u.varEntry.offset);
+    free(var);
+    free(temp->key);
+    free(temp);
+  }
+  freeHashTable(env->table);
+  free(env);
+}
+
+void freeTypeEnv(environment env) {
+  while(env->stack) {
+    stackElem temp = env->stack;
+    env->stack = env->stack->next;
+    envEntry type = find(env, temp->key);
+    H_delete(env->table,temp->key);
+    switch(type->u.typeEntry.typ->kind){
+      case integer_type:
+        free(type);
+      break;
+      case boolean_type:
+        free(type);
+      break;
+      case void_type:
+        free(type);
+      break;
+	    case null_type:
+        free(type);
+      break;
+      case class_type:
+        freeVarEnv(type->u.typeEntry.typ->u.class.instancevars);
+        free(type);
+        free(temp->key);
+      break;
+      case array_type:
+        free(type);
+        free(temp->key);
+      break;
+      default: break;
+    }
+    free(temp);
+  }
+  freeHashTable(env->table);
+  free(env);
+}
 
 char *Marker() {
   if (stackmarker != NULL) {
@@ -134,6 +185,8 @@ int endScope(environment env) {
       default: break;
     }
     H_delete(env->table,env->stack->key);
+    OFFSET_REF_DEC(var->u.varEntry.offset);
+    free(var);
     temp = env->stack;
     env->stack = env->stack->next;
     free(temp);

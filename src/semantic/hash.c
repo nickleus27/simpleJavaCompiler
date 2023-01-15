@@ -24,7 +24,15 @@ struct tableElem_ {
   tableElem next;
 };
 
+void freeHashTable(H_hashTable table) {
+  free(table->table);
+  free(table);
+}
 
+void freeTableElem(tableElem elem) {
+  free(elem->data);
+  free(elem);
+}
 
 int hash(char *key, int size);
 tableElem TableElem(void *data, char *key, tableElem next);

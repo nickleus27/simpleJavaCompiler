@@ -38,5 +38,7 @@ env_sizes getMemTotals();
 /* call this after function analysis ends */
 void resetMemTotals();
 env_sizes getEnvMemTotals(environment env);
+void freeVarEnv(environment env);
+void freeTypeEnv(environment env);
 
 #endif

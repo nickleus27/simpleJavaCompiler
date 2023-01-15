@@ -15,6 +15,8 @@ With that being said, I also have made changes to adhere to the standard memory 
 
 Despite the name, ```Simple Java Compiler```, this is not a java compiler, which would compile to byte code that runs on the java virtual machine. This compiler has some keywords and syntax similar to java, and thus is probably where the name came from.
 
+Dependency: ```bison v 3.8.3```, ```flex```
+
 To build: ```cd src/build && make```
 To build debug: ```cd src/build && make debug```
 To compile a simple java program run src/build/sjc < file name >

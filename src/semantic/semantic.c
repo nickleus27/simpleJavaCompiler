@@ -35,6 +35,7 @@ struct expressionRec_ {
 #define END_BLOCK_SCOPE 0
 #define ON 1
 #define OFF 0
+#define keyLen 101
 
 /* GLOBALS */
 /* does expressionRec need to be global here ? */
@@ -113,9 +114,13 @@ AATstatement analyzeProgram(ASTprogram program) {
   free_arm64_env(functionStack);
   free_arm64_env(argStack);
   free_arm64_env(classStack);
+  freeVarEnv(varEnv);
+  freeTypeEnv(typeEnv);
+  free(program);
   return AATpop();
 }
 AATstatement visitFunctionList(environment typeEnv, environment functionEnv, environment varEnv, ASTfunctionDecList function){
+  /* at end of list return empty AAT to be filled in */
   if(!function){
     AATstatement stm = SequentialStatement(NULL, NULL); 
     AATpush(stm); 
@@ -123,10 +128,12 @@ AATstatement visitFunctionList(environment typeEnv, environment functionEnv, env
   }
   AATstatement stmLst = visitFunctionList(typeEnv, functionEnv, varEnv, function->rest);
   stmLst->u.sequential.left = analyzeFunction(typeEnv, functionEnv, varEnv, function->first);
-  stmLst->u.sequential.right = SequentialStatement(NULL, NULL);
+  stmLst->u.sequential.right = SequentialStatement(NULL, NULL); // build AAT top down
+  free(function);
   return stmLst->u.sequential.right;
 }
 AATstatement visitStatementList(environment typeEnv, environment functionEnv, environment varEnv, ASTstatementList statement){
+  /* at end of list return empty AAT to be filled in */
   if(!statement){
     AATstatement stm = SequentialStatement(NULL, NULL); 
     AATpush(stm); 
@@ -134,7 +141,8 @@ AATstatement visitStatementList(environment typeEnv, environment functionEnv, en
   }
   AATstatement stmLst = visitStatementList(typeEnv, functionEnv, varEnv, statement->rest);
   stmLst->u.sequential.left = analyzeStatement(typeEnv, functionEnv, varEnv, statement->first);
-  stmLst->u.sequential.right = SequentialStatement(NULL, NULL);
+  stmLst->u.sequential.right = SequentialStatement(NULL, NULL); // build AAT top down
+  free(statement);
   return stmLst->u.sequential.right;
 }
 
@@ -142,10 +150,11 @@ void visitClassList(environment typeEnv, environment functionEnv, environment va
   if(!class) return;
   visitClassList(typeEnv, functionEnv, varEnv, class->rest);
   analyzeClass(typeEnv, functionEnv, varEnv, class->first);
+  free(class);
 }
-/* adds nd arrays to type environment in analyze class function*/
+
+/* adds nd arrays to type environment in analyze class function */
 envEntry enterArrayTypesClass(environment typeEnv, envEntry varType, ASTinstanceVarDec node){
-  #define keyLen 101
   type baseType = varType->u.typeEntry.typ;
   char key[keyLen];
   /*check to make sure size is less than key */
@@ -167,7 +176,6 @@ envEntry enterArrayTypesClass(environment typeEnv, envEntry varType, ASTinstance
 }
 /* adds nd arrays to type environment in analyze statement function*/
 envEntry enterArrayTypesDectStm(environment typeEnv, envEntry varType, ASTstatement statement){
-#define keyLen 101
   type baseType = varType->u.typeEntry.typ;
   char key[keyLen];
     /*check to make sure size is less than key */
@@ -190,7 +198,6 @@ envEntry enterArrayTypesDectStm(environment typeEnv, envEntry varType, ASTstatem
 
 /* adds nd arrays to type environment in analyzeFormal function*/
 envEntry enterArrayTypesFormal(environment typeEnv, envEntry varType, ASTformal formal){
-#define keyLen 101
   type baseType = varType->u.typeEntry.typ;
   char key[keyLen];
   /*check to make sure size is less than key */
@@ -226,8 +233,10 @@ void analyzeInstanceVarDecList(environment typeEnv, environment classVarEnv, env
     envEntry insVar = find(classVarEnv, varList->first->name);
     enter_arm64(classStack, 0 /*scope is always 0 for class memory*/, insVar->u.varEntry.offset);
   }
+  free(varList->first->type);
+  free(varList);
 }
-/*Todo: make recursive function for instanceVarList */
+
 void analyzeClass(environment typeEnv, environment functionEnv, environment varEnv, ASTclass class){
   environment classVarEnv = Environment();
   enter( typeEnv, class->name, TypeEntry( ClassType( classVarEnv ) ) );
@@ -670,7 +679,6 @@ expressionRec analyzeNewExp(environment typeEnv, ASTexpression exp){
 }
 
 expressionRec analyzeNewArray(environment typeEnv, environment functionEnv, environment varEnv, ASTexpression exp){
-#define keyLen 101
   char key[keyLen];
   envEntry expType;
   expressionRec expRec;
