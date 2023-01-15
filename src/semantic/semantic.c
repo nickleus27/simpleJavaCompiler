@@ -35,7 +35,6 @@ struct expressionRec_ {
 #define END_BLOCK_SCOPE 0
 #define ON 1
 #define OFF 0
-#define keyLen 101
 
 /* GLOBALS */
 /* does expressionRec need to be global here ? */
@@ -68,9 +67,7 @@ expressionRec visitClassVar(environment typeEnv, environment functionEnv,environ
 envEntry analyzeFormal(environment typeEnv, environment functionEnv, environment varEnv, ASTformal formal);
 void visitFormals(environment typeEnv, environment varEnv, typeList protoList, ASTfunctionDec function, ASTformalList formals);
 typeList analyzeFormalList(environment typeEnv, environment functionEnv, environment varEnv, ASTformalList formals);
-envEntry enterArrayTypesClass(environment typeEnv, envEntry varType, ASTinstanceVarDec node);
-envEntry enterArrayTypesDectStm(environment typeEnv, envEntry varType, ASTstatement statement);
-envEntry enterArrayTypesFormal(environment typeEnv, envEntry varType, ASTformal formal);
+envEntry enterArrayType(environment typeEnv, envEntry varType, int array_dim, char* array_type);
 
 /* does this need to be malloced here and return a pointer ??? */
 expressionRec ExpressionRec(type typ, AATexpression tree) {
@@ -153,63 +150,14 @@ void visitClassList(environment typeEnv, environment functionEnv, environment va
   free(class);
 }
 
-/* adds nd arrays to type environment in analyze class function */
-envEntry enterArrayTypesClass(environment typeEnv, envEntry varType, ASTinstanceVarDec node){
+/* adds nd arrays to type environment */
+envEntry enterArrayType(environment typeEnv, envEntry varType, int array_dim, char* array_type){
   type baseType = varType->u.typeEntry.typ;
-  char key[keyLen];
-  /*check to make sure size is less than key */
-  if( strlen(node->type)+1 >= keyLen)
-    Error(node->line, " Array type %s must be less than 100 characters", node->type);
-  else
-    sprintf(key,"%s", node->type);
-  for(int i = 0; i < node->arraydimension; i++){
-    if( strlen(key)+1 + 2 >= keyLen)
-      Error(node->line, " Array type %s must be less than 100 characters with included []'s", node->type);
-    else
-      sprintf(key, "%s%s", key, "[]");
-    if( !find(typeEnv, key) ){
-        enter( typeEnv, strdup(key), TypeEntry( ArrayType( baseType ) ) );
-    }
-    baseType = find(typeEnv, key)->u.typeEntry.typ;
-  }
-  return find(typeEnv, key);
-}
-/* adds nd arrays to type environment in analyze statement function*/
-envEntry enterArrayTypesDectStm(environment typeEnv, envEntry varType, ASTstatement statement){
-  type baseType = varType->u.typeEntry.typ;
-  char key[keyLen];
-    /*check to make sure size is less than key */
-  if( strlen(statement->u.varDecStm.type)+1 >= keyLen)
-    Error(statement->line, " Array type %s must be less than 100 characters", statement->u.varDecStm.type);
-  else
-    sprintf(key, "%s", statement->u.varDecStm.type );
-  for(int i = 0; i < statement->u.varDecStm.arraydimension; i++){
-    if( strlen(key)+1 + 2 >= keyLen)
-      Error(statement->line, " Array type %s must be less than 100 characters with included []'s", statement->u.varDecStm.type);
-    else
-      sprintf(key, "%s%s", key, "[]");
-    if( !find(typeEnv, key) ){
-      enter( typeEnv, strdup(key), TypeEntry( ArrayType( baseType ) ) );
-    }
-    baseType = find(typeEnv, key)->u.typeEntry.typ;
-  }
-  return find(typeEnv, key);
-}
-
-/* adds nd arrays to type environment in analyzeFormal function*/
-envEntry enterArrayTypesFormal(environment typeEnv, envEntry varType, ASTformal formal){
-  type baseType = varType->u.typeEntry.typ;
-  char key[keyLen];
-  /*check to make sure size is less than key */
-  if( strlen(formal->type)+1 >= keyLen)
-    Error(formal->line, " Array type %s must be less than 100 characters", formal->type);
-  else
-    sprintf(key, "%s", formal->type );
-  for(int i = 0; i < formal->arraydimension; i++){
-    if( strlen(formal->type)+1 +2 >= keyLen)
-      Error(formal->line, " Array type %s must be less than 100 characters with include []'s", formal->type);
-    else
-      sprintf(key, "%s%s", key, "[]");
+  int array_size = strlen(array_type)+1;
+  char key[array_size];
+  sprintf(key, "%s", array_type);
+  for(int i = 0; i < array_dim; i++){
+    sprintf(key, "%s%s", key, "[]");
     if( !find(typeEnv, key) ){
       enter( typeEnv, strdup(key), TypeEntry( ArrayType( baseType ) ) );
     }
@@ -227,7 +175,7 @@ void analyzeInstanceVarDecList(environment typeEnv, environment classVarEnv, env
   }else{
     if( varList->first->arraydimension ){
       /* check for array type and enter into type env */
-      varType = enterArrayTypesClass(typeEnv, varType, varList->first);
+      varType = enterArrayType(typeEnv, varType, varList->first->arraydimension, varList->first->type);
     } /* enter variable here */
     enter( classVarEnv, varList->first->name, VarEntry( varType->u.typeEntry.typ, varType->u.typeEntry.typ->size_type ) );
     envEntry insVar = find(classVarEnv, varList->first->name);
@@ -251,7 +199,7 @@ envEntry analyzeFormal(environment typeEnv, environment functionEnv, environment
     }else{
       if( formal->arraydimension ){
           /* check for array type and enter into type env */
-        varType = enterArrayTypesFormal(typeEnv, varType, formal);
+        varType = enterArrayType(typeEnv, varType, formal->arraydimension, formal->type);
       } /* enter variable here */
     }
     return varType;
@@ -277,7 +225,7 @@ void visitFormals(environment typeEnv, environment varEnv, typeList protoList, A
     }else{
       if( formals->first->arraydimension ){
         /* check for array type and enter into type env */
-        formType = enterArrayTypesFormal(typeEnv, formType, formals->first);
+        formType = enterArrayType(typeEnv, formType, formals->first->arraydimension, formals->first->type);
       }/* enter variable here */
       enter( varEnv, formals->first->name, VarEntry( formType->u.typeEntry.typ, formType->u.typeEntry.typ->size_type ) );
       envEntry formalArg = find(varEnv, formals->first->name);/*arg for function variable and offset from fp*/
@@ -530,7 +478,7 @@ AATstatement analyzeStatement(environment typeEnv, environment functionEnv, envi
 
         /* check for array type and enter into type env */
         if( statement->u.varDecStm.arraydimension ){
-          varType = enterArrayTypesDectStm(typeEnv, varType, statement);
+          varType = enterArrayType(typeEnv, varType, statement->u.varDecStm.arraydimension, statement->u.varDecStm.type);
         }
 
         /* check if variable is already declared in this scope */
@@ -679,25 +627,19 @@ expressionRec analyzeNewExp(environment typeEnv, ASTexpression exp){
 }
 
 expressionRec analyzeNewArray(environment typeEnv, environment functionEnv, environment varEnv, ASTexpression exp){
-  char key[keyLen];
   envEntry expType;
   expressionRec expRec;
-  /*check to make sure size is less than key */
-  if( strlen(exp->u.newArrayExp.name)+1 >= keyLen)
-    Error(exp->line, " Array type %s must be less than 100 characters", exp->u.newArrayExp.name);
-  else
-    sprintf(key,"%s", exp->u.newArrayExp.name);
+  int array_size = strlen(exp->u.newArrayExp.name)+exp->u.newArrayExp.arraydimension + 1;
+  char key[array_size];
+  sprintf(key,"%s", exp->u.newArrayExp.name);
   for(int i = 0; i < exp->u.newArrayExp.arraydimension; i++){
-    if( strlen(key)+1 + 2 >= keyLen) // + 2 for the "[]" that are being added
-      Error(exp->line, " Array type %s must be less than 100 characters with included []'s", exp->u.newArrayExp.name);
-    else
-      sprintf(key, "%s%s", key, "[]");
+    sprintf(key, "%s%s", key, "[]");
   }
   expRec = analyzeExpression(typeEnv, functionEnv, varEnv, exp->u.newArrayExp.size);
   if( expRec.typ != IntegerType())
     Error(exp->line, " Array size must be an integer");
   expType = find(typeEnv, key);
-  if( !expType ) return ExpressionRec(NULL, ConstantExpression(0, 0));
+  if( !expType ) { return ExpressionRec(NULL, ConstantExpression(0, 0)); }
   return ExpressionRec(expType->u.typeEntry.typ, Allocate(OperatorExpression(
     expRec.tree, ConstantExpression(expType->u.typeEntry.typ->u.array->size_type, INT),
     AAT_MULTIPLY, INT)));
