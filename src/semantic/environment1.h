@@ -40,5 +40,6 @@ void resetMemTotals();
 env_sizes getEnvMemTotals(environment env);
 void freeVarEnv(environment env);
 void freeTypeEnv(environment env);
+void freeFunctionEnv(environment env);
 
 #endif

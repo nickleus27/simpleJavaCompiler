@@ -238,6 +238,7 @@ void generateConstantExp_offset(AATexpression tree){
       emit("/*BAD OFFSET EXPRESSION*/\n");
       break;
   }
+  OFFSET_REF_DEC(tree->u.offset);
 }
 
 void generateRegisterExp(AATexpression tree){
@@ -584,6 +585,7 @@ void generateStatement(AATstatement tree) {
     case AAT_HALT:
       break;
   }
+  free(tree);
 }
 
 void generateMove(AATstatement tree) {

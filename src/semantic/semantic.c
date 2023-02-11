@@ -37,7 +37,6 @@ struct expressionRec_ {
 #define OFF 0
 
 /* GLOBALS */
-/* does expressionRec need to be global here ? */
 int offset;  /* offset of last declared variable */
 int RETURN_FLAG = NO_RETURN_TYPE;
 int forStmFlag = END_BLOCK_SCOPE;
@@ -47,10 +46,8 @@ stack_env functionStack = NULL;
 stack_env argStack = NULL;
 stack_env classStack = NULL;
 
-/* does ExpressionRec need to return a pointer??? */
 expressionRec ExpressionRec(type typ, AATexpression tree);
 
-/* old function prototypes */
 expressionRec analyzeOpExpression(environment typeEnv, environment functionEnv,environment varEnv, ASTexpression exp);
 expressionRec analyzeExpression(environment typeEnv, environment functionEnv, environment varEnv, ASTexpression exp);
 expressionRec analyzeVar(environment typeEnv, environment functionEnv, environment varEnv, ASTvariable var);
@@ -69,16 +66,12 @@ void visitFormals(environment typeEnv, environment varEnv, typeList protoList, A
 typeList analyzeFormalList(environment typeEnv, environment functionEnv, environment varEnv, ASTformalList formals);
 envEntry enterArrayType(environment typeEnv, envEntry varType, int array_dim, char* array_type);
 
-/* does this need to be malloced here and return a pointer ??? */
 expressionRec ExpressionRec(type typ, AATexpression tree) {
   expressionRec retval;
   retval.typ = typ;
   retval.tree = tree;
   return retval;
 }
-
-/************************ OLD SEMANTIC.C ******************************************/
-
 
 AATstatement analyzeProgram(ASTprogram program) {
   environment typeEnv;
@@ -113,6 +106,7 @@ AATstatement analyzeProgram(ASTprogram program) {
   free_arm64_env(classStack);
   freeVarEnv(varEnv);
   freeTypeEnv(typeEnv);
+  freeFunctionEnv(functionEnv);
   free(program);
   return AATpop();
 }
@@ -247,6 +241,9 @@ void visitFormals(environment typeEnv, environment varEnv, typeList protoList, A
     }else if ( formType && !protoList){
       Error( function->line, " formals do not match function prototype" );
     }
+    free(formals->first->type);
+    free(formals->first);
+    free(formals);
   }
 }
 
@@ -267,13 +264,12 @@ AATstatement analyzeFunction(environment typeEnv, environment functionEnv, envir
       envEntry retType = find(typeEnv, function->u.prototype.returntype);
       if( !retType ) Error(function->line, " %s is not a type", function->u.prototype.returntype);
       typeList formalList = analyzeFormalList( typeEnv, functionEnv ,  varEnv,  function->u.prototype.formals);
-      if(retType)
+      if(retType) {
         enter( functionEnv, function->u.prototype.name, FunctionEntry(retType->u.typeEntry.typ, formalList,
-          NewNamedLabel(function->u.prototype.name), NewLabel()));
-      /**
-       * TODO: This
-       * 
-       */
+        NewNamedLabel(function->u.prototype.name), NewLabel()));
+      }
+      free(function->u.prototype.returntype);
+      free(function);
       return EmptyStatement();
     }
     break;
@@ -316,8 +312,9 @@ AATstatement analyzeFunction(environment typeEnv, environment functionEnv, envir
       arm64endScope( functionStack , endScope(varEnv));
       addMemSizes(functionStack, getMemTotals());
       resetMemTotals();//need to call this at the end of analyzing stack memory
-
       AATseqStmCleanUp( stmPtr );
+      free(function->u.functionDef.returntype);
+      free(function);
       return functionDefinition(AATpop(), generateStackMemory(functionStack), GLOBfunctPtr->u.functionEntry.startLabel, GLOBfunctPtr->u.functionEntry.endLabel);
     }
     break;

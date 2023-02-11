@@ -17,6 +17,7 @@
 #include "environment2.h"
 #include "../codegen/MachineDependent.h"
 #include "../lib/offset_ref.h"
+#include "../lib/label_ref.h"
 /* Use a reasonable (PRIME!) hash table size */
 #define HASHTABLESIZE 503
 
@@ -96,6 +97,23 @@ void freeTypeEnv(environment env) {
       break;
       default: break;
     }
+    free(temp);
+  }
+  freeHashTable(env->table);
+  free(env);
+}
+
+void freeFunctionEnv(environment env) {
+while(env->stack) {
+    stackElem temp = env->stack;
+    env->stack = env->stack->next;
+    envEntry function = find(env, temp->key);
+    H_delete(env->table,temp->key);
+    // TODO: add label ref to function type and AAT
+    //LABEL_REF_DEC (function->u.functionEntry.endLabel);
+    //LABEL_REF_DEC (function->u.functionEntry.startLabel);
+    free(function);
+    free(temp->key);
     free(temp);
   }
   freeHashTable(env->table);
@@ -209,7 +227,7 @@ void AddBuiltinTypes(environment env) {
 void AddBuiltinFunctions(environment env) {
   typeList formals = NULL;
   //enter(env, "Read", FunctionEntry(IntegerType(),NULL,"Read","Readend"));
-  enter(env, "printInt", FunctionEntry(VoidType(),TypeList(IntegerType(), NULL, 8),"printInt","printIntEnd"));
+  enter(env, strndup("printInt", strlen("printInt")+1), FunctionEntry(VoidType(),TypeList(IntegerType(), NULL, 8),"printInt","printIntEnd"));
   //enter(env, "Print", FunctionEntry(VoidType(), TypeList(IntegerType(), NULL),
 	//			    "Print","Printend"));
 }

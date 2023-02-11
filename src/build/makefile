@@ -6,8 +6,8 @@ debug: sjc
 
 CC = gcc $(CFLAGS)
 
-sjc: sjc.o lex.yy.o errors.o parser.o AST.o ASTPrintTree.o offset_ref.o type.o environment.o hash.o semantic.o AAT.o AATBuildTree.o AATPrintTree.o register.o label.o codegenArm64.o env_arm64.o
-	$(CC) -o sjc sjc.o lex.yy.o errors.o parser.o AST.o ASTPrintTree.o offset_ref.o type.o environment.o hash.o semantic.o AAT.o AATBuildTree.o AATPrintTree.o registerArm64.o label.o codegenArm64.o env_arm64.o
+sjc: sjc.o lex.yy.o errors.o parser.o AST.o ASTPrintTree.o offset_ref.o label_ref.o type.o environment.o hash.o semantic.o AAT.o AATBuildTree.o AATPrintTree.o register.o label.o codegenArm64.o env_arm64.o
+	$(CC) -o sjc sjc.o lex.yy.o errors.o parser.o AST.o ASTPrintTree.o label_ref.o offset_ref.o type.o environment.o hash.o semantic.o AAT.o AATBuildTree.o AATPrintTree.o registerArm64.o label.o codegenArm64.o env_arm64.o
 
 codegenArm64.o: ../assembly/AAT.h ../codegen/registerArm64.h ../assembly/label.h ../codegen/codegenArm64.c
 	$(CC) -c ../codegen/codegenArm64.c
@@ -35,6 +35,9 @@ hash.o: ../semantic/hash.h ../semantic/hash.c
 
 offset_ref.o: ../lib/offset_ref.h ../lib/offset_ref.c
 	$(CC) -c ../lib/offset_ref.c
+
+label_ref.o: ../lib/label_ref.h ../lib/label_ref.c
+	$(CC) -c ../lib/label_ref.c
 
 environment.o: ../semantic/environment.c ../semantic/environment1.h ../semantic/environment2.h
 	$(CC) -c ../semantic/environment.c
@@ -73,4 +76,4 @@ lex.yy.c: ../lexer/sjava.lex parser.h
 	flex --header-file=lex.yy.h ../lexer/sjava.lex
 
 clean:
-	rm -f sjc semantic.o lex.yy.o lex.yy.c lex.yy.h errors.o parser.o AST.o ASTPrintTree.o core parser.o parser.h parser.c y.output AST.o type.o environment.o semantictest.o hash.o label.o sjc.o AATPrintTree.o AATBuildTree.o codegenArm64.o AAT.o registerArm64.o env_arm64.o offset_ref.o
+	rm -f sjc semantic.o lex.yy.o lex.yy.c lex.yy.h errors.o parser.o AST.o ASTPrintTree.o core parser.o parser.h parser.c y.output AST.o type.o environment.o semantictest.o hash.o label.o sjc.o AATPrintTree.o AATBuildTree.o codegenArm64.o AAT.o registerArm64.o env_arm64.o offset_ref.o label_ref.o
