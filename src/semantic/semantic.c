@@ -463,6 +463,7 @@ AATstatement analyzeStatement(environment typeEnv, environment functionEnv, envi
       AATseqStmCleanUp( stmPtr );
       if( !thisForStmFlag )
         arm64endScope(functionStack, endScope(varEnv));
+      free(statement);
       return AATpop();
     }
     break;
@@ -495,13 +496,16 @@ AATstatement analyzeStatement(environment typeEnv, environment functionEnv, envi
           if (LHS->u.varEntry.typ != RHS.typ) {
             Error(statement->line," Type mismatch on assignment");
           }
+          free(statement);
           return AssignmentStatement( BaseVariable(LHS->u.varEntry.offset, LHS->u.varEntry.typ->size_type),
             RHS.tree, LHS->u.varEntry.typ->size_type );
         }
+        free(statement);
         return AssignmentStatement(BaseVariable(LHS->u.varEntry.offset,  LHS->u.varEntry.typ->size_type),
           ConstantExpression(0, LHS->u.varEntry.typ->size_type), LHS->u.varEntry.typ->size_type );
       }else{
         Error(statement->line," %s type not defined", statement->u.varDecStm.type);
+        free(statement);
         return AssignmentStatement(ConstantExpression(0, 0), ConstantExpression(0, 0), 0);
       }
     }
@@ -512,12 +516,15 @@ AATstatement analyzeStatement(environment typeEnv, environment functionEnv, envi
       LHS = analyzeVar(typeEnv,functionEnv,varEnv,statement->u.assignStm.lhs);
       RHS = analyzeExpression(typeEnv,functionEnv,varEnv,statement->u.assignStm.rhs);
       if (LHS.typ == RHS.typ) {
+        free(statement);
         return AssignmentStatement(LHS.tree, RHS.tree, LHS.typ->size_type);
       }
       if ((LHS.typ->kind == class_type || LHS.typ->kind == array_type) && (RHS.typ == NullType())) {
+        free(statement);
         return AssignmentStatement(LHS.tree, RHS.tree, LHS.typ->size_type);
       }
       Error(statement->line," Type mismatch on assignment");
+      free(statement);
       return AssignmentStatement(LHS.tree, RHS.tree, LHS.typ->size_type);
     }
     break;
@@ -530,22 +537,26 @@ AATstatement analyzeStatement(environment typeEnv, environment functionEnv, envi
 	      Error(statement->line," If test must be a boolean");
       }
       thenTree = analyzeStatement(typeEnv, functionEnv, varEnv, statement->u.ifStm.thenstm);
-      if (statement->u.ifStm.elsestm != NULL)
+      if (statement->u.ifStm.elsestm != NULL) {
 	      elseTree = analyzeStatement(typeEnv, functionEnv, varEnv, statement->u.ifStm.elsestm);
-      else
+      } else {
         elseTree = NULL;
+      }
+      free(statement);
       return IfStatement(test.tree, thenTree, elseTree);
     }
     break;
   case CallStm:
     {
       envEntry function = find(functionEnv, statement->u.callStm.name);
-      if ( function )
-        return CallStatement( analyzeCallStm(typeEnv, functionEnv, varEnv, statement),
-          function->u.functionEntry.startLabel, function->u.functionEntry.argMemSize);
-      else
-        Error(statement->line, " Cannot find function %s", statement->u.callStm.name);
-        return EmptyStatement();
+      if ( function ) {
+        AATexpressionList expList = analyzeCallStm(typeEnv, functionEnv, varEnv, statement);
+        free(statement);
+        return CallStatement(expList, function->u.functionEntry.startLabel, function->u.functionEntry.argMemSize);
+      }
+      Error(statement->line, " Cannot find function %s", statement->u.callStm.name);
+      free(statement);
+      return EmptyStatement();
     }
     break;
   case ForStm:
@@ -555,12 +566,14 @@ AATstatement analyzeStatement(environment typeEnv, environment functionEnv, envi
       beginScope(varEnv);
       AATstatement init = analyzeStatement(typeEnv, functionEnv, varEnv, statement->u.forStm.initialize);
       expressionRec test = analyzeExpression(typeEnv, functionEnv, varEnv, statement->u.forStm.test);
-      if (test.typ != BooleanType())
+      if (test.typ != BooleanType()) {
         Error(statement->line, " For test must be a boolean");
+      }
       AATstatement increment = analyzeStatement(typeEnv, functionEnv, varEnv, statement->u.forStm.increment);
       AATstatement body = analyzeStatement(typeEnv, functionEnv, varEnv, statement->u.forStm.body);
       arm64endScope(functionStack, endScope(varEnv));
       forStmFlag = OFF;
+      free(statement);
       return ForStatement(init, test.tree, increment, body);
     }
     break;
@@ -572,6 +585,7 @@ AATstatement analyzeStatement(environment typeEnv, environment functionEnv, envi
 	      Error(statement->line," While test must be a boolean");
       }
       AATstatement body = analyzeStatement(typeEnv, functionEnv, varEnv, statement->u.whileStm.body);
+      free(statement);
       return WhileStatement(test.tree, body);
     }
     break;
@@ -580,8 +594,10 @@ AATstatement analyzeStatement(environment typeEnv, environment functionEnv, envi
       AATstatement body = analyzeStatement(typeEnv, functionEnv, varEnv, statement->u.doWhileStm.body);
       expressionRec test = analyzeExpression(typeEnv, functionEnv, varEnv,
 				    statement->u.doWhileStm.test);
-      if ( test.typ != BooleanType() )
+      if ( test.typ != BooleanType() ) {
         Error(statement->line, " Do while test must be a boolean");
+      }
+      free(statement);
       return DoWhileStatement(test.tree, body);
     }
     break;
@@ -596,11 +612,13 @@ AATstatement analyzeStatement(environment typeEnv, environment functionEnv, envi
             || expType.typ != IntegerType() )
               RETURN_FLAG = NON_VOID_TYPE;
       }
+      free(statement);
       return ReturnStatement( expType.tree, GLOBfunctPtr->u.functionEntry.endLabel, GLOBfunctPtr->u.functionEntry.returntyp->size_type);
     }
     break; 
   case EmptyStm:
     {
+      free(statement);
       return EmptyStatement();
     }
     break;
