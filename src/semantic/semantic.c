@@ -452,17 +452,18 @@ AATstatement analyzeStatement(environment typeEnv, environment functionEnv, envi
     case BlockStm:
     {
       int thisForStmFlag = forStmFlag;
-      if( !thisForStmFlag ){
+      if ( !thisForStmFlag ){
         /* this arm64 needs to be called first */
         beginScope_Arm64(functionStack, getScope(varEnv));
         beginScope(varEnv);
-      }
-      else
+      } else {
         forStmFlag = OFF;
+      }
       AATstatement stmPtr = visitStatementList(typeEnv, functionEnv, varEnv, statement->u.blockStm.statements);
       AATseqStmCleanUp( stmPtr );
-      if( !thisForStmFlag )
+      if( !thisForStmFlag ) {
         arm64endScope(functionStack, endScope(varEnv));
+      }
       free(statement);
       return AATpop();
     }
