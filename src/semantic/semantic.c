@@ -662,25 +662,59 @@ expressionRec analyzeNewArray(environment typeEnv, environment functionEnv, envi
 
 expressionRec analyzeExpression(environment typeEnv, environment functionEnv, environment varEnv, ASTexpression exp) {
   switch(exp->kind) {
-  case IntLiteralExp:
-    return ExpressionRec( IntegerType(), ConstantExpression(exp->u.intLiteralExp.value, INT));
-  case BoolLiteralExp:
-    return ExpressionRec( BooleanType(), ConstantExpression(exp->u.boolLiteralExp.value, BOOL));
-  case NullExp:
-    return ExpressionRec( NullType(), ConstantExpression(exp->u.nullExp.zero, PTR));
-  case OpExp:
-    return analyzeOpExpression(typeEnv,functionEnv, varEnv, exp);
-  case VarExp:
-    return analyzeVar(typeEnv,functionEnv,varEnv,exp->u.varExp.var);
-  case CallExp:
-    return  analyzeCallExp(typeEnv, functionEnv, varEnv, exp);
-  case NewExp:
-    return analyzeNewExp(typeEnv, exp);
-  case NewArrayExp:
-    return analyzeNewArray(typeEnv, functionEnv, varEnv, exp);
-  default:
-    Error(exp->line," Bad Expression");
-    return ExpressionRec( IntegerType(), ConstantExpression(0, 0));
+    case IntLiteralExp:
+    {
+      int value = exp->u.intLiteralExp.value;
+      free(exp);
+      return ExpressionRec( IntegerType(), ConstantExpression(value, INT));
+    }
+    case BoolLiteralExp:
+    {
+      int value = exp->u.intLiteralExp.value;
+      free(exp);
+      return ExpressionRec( BooleanType(), ConstantExpression(value, BOOL));
+    }
+    case NullExp:
+    {
+      free(exp);
+      return ExpressionRec( NullType(), ConstantExpression(0, PTR));
+    }
+    case OpExp:
+    {
+      expressionRec expRec = analyzeOpExpression(typeEnv,functionEnv, varEnv, exp);
+      free(exp);
+      return expRec;
+    }
+    case VarExp:
+    {
+      expressionRec expRec = analyzeVar(typeEnv,functionEnv,varEnv,exp->u.varExp.var);
+      free(exp);
+      return expRec;
+    }
+    case CallExp:
+    {
+      expressionRec expRec = analyzeCallExp(typeEnv, functionEnv, varEnv, exp);
+      free(exp);
+      return expRec;
+    }
+    case NewExp:
+    {
+      expressionRec expRec = analyzeNewExp(typeEnv, exp);
+      free(exp);
+      return expRec;
+    }
+    case NewArrayExp:
+    {
+      expressionRec expRec = analyzeNewArray(typeEnv, functionEnv, varEnv, exp);
+      free(exp);
+      return expRec;
+    }
+    default:
+    {
+      Error(exp->line," Bad Expression");
+      free(exp);
+      return ExpressionRec( IntegerType(), ConstantExpression(0, 0));
+    }
   }
 }
 
