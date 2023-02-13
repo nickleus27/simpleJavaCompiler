@@ -17,4 +17,18 @@ void main() {
     arr[0][0][0][0][0][0] = new int [1];
     arr[0][0][0][0][0][0][0] = 1+2+3+4+5+6+7+8+9;
     printInt(arr[0][0][0][0][0][0][0]);
+/*
+    int arr2[] = new int[5];
+    for (int i = 0; i<5; i++) {
+        arr2[i] = 0;
+    }
+    for ( int i= 0; i<5; i++) {
+        printInt(arr2[i]);
+        arr2[i]++;
+        printInt(arr2[i]);
+    }
+    for ( int i= 0; i<5; i++) {
+        printInt(arr2[i]);
+    }
+    */
 }

@@ -16,6 +16,9 @@
 void yyerror(char *s) {
     Error(Current_Line,"%s\n",s);  
 }
+
+typedef enum {AST_INC, AST_DEC}AST_INC_DEC;
+
 ASTvariable ASTclassArray(ASTvariable first, ASTvariable third){
     ASTvariable current = third->u.arrayVar.base, prev = third; 
     while(current->kind != BaseVar){
@@ -25,6 +28,35 @@ ASTvariable ASTclassArray(ASTvariable first, ASTvariable third){
     prev->u.arrayVar.base = ASTClassVar(first->line, first, current->u.baseVar.name); 
     free(current); 
     return third;
+}
+
+//helper function for var++ or var--
+//this clones the variable so that memory can be deleted in tree traversal in semantic.c
+ASTstatement AST_inc_dec_asgn (ASTvariable var, AST_INC_DEC inc_dec) {
+    ASTvariable dupVar;
+    switch(var->kind){
+        case BaseVar:
+        {
+            printf("BASE VAR DUP FOR ++ OR --\n");
+            dupVar = ASTBaseVar(var->line, var->u.baseVar.name);
+            break;
+        }
+        case ClassVar:
+        {
+            printf("CLASS VAR DUP FOR ++ OR --\n");
+            break;
+        }
+        case ArrayVar:
+        {
+            printf("ARRAY VAR DUP FOR ++ OR --\n");
+            break;
+        }
+        default: printf("BAD VARIABLE TYPE FOR A ++ OR -- STATEMENT\n");
+    }
+    if(inc_dec == AST_INC) {
+        return ASTAssignStm(var->line, var, ASTOpExp( var->line, AST_PLUS, ASTVarExp( var->line, dupVar), ASTIntLiteralExp( var->line, 1)));
+    }
+    return ASTAssignStm(var->line, var, ASTOpExp( var->line, AST_MINUS, ASTVarExp( var->line, dupVar), ASTIntLiteralExp( var->line, 1)));
 }
 %}
 
@@ -200,15 +232,10 @@ for_stmnt:  FOR LPAREN for_init exp SEMICOLON for_inc_dec RPAREN a_stmnt {$$=AST
 for_init:   varDecStmt
 |           asn_stmnt
 for_inc_dec:    asn_stmnt
-/* TODO:    following change needed for memory management */
-/*  All the plusplus/minusminus rules will create segFaults when the AST tree nodes are deleted inline with visits in semantic.c    *
-**  Need to make a helper function the makes a new ASTBaseVar in the ASTVarExp function call &                                      *
-**  The char* name argument for ASTBaseVar needs to be strcpy-ed                                                                    *
-**  This will create a new node with a new name reference for the rhs of ASTOpExp                                                   */
-|           var_types PLUSPLUS    { $$ = ASTAssignStm ( $1->line, $1, ASTOpExp( $1->line, AST_PLUS, ASTVarExp( $1->line, $1 ), ASTIntLiteralExp( $1->line, 1))); }
-|           var_types MINUSMINUS  { $$ = ASTAssignStm ( $1->line, $1, ASTOpExp( $1->line, AST_MINUS, ASTVarExp( $1->line, $1 ), ASTIntLiteralExp( $1->line, 1))); }                                       
-plus_plus:  var_types PLUSPLUS SEMICOLON    { $$ = ASTAssignStm ( $1->line, $1, ASTOpExp( $1->line, AST_PLUS, ASTVarExp( $1->line, $1 ), ASTIntLiteralExp( $1->line, 1))); }
-min_min:    var_types MINUSMINUS SEMICOLON  { $$ = ASTAssignStm ( $1->line, $1, ASTOpExp( $1->line, AST_MINUS, ASTVarExp( $1->line, $1 ), ASTIntLiteralExp( $1->line, 1))); }
+|           var_types PLUSPLUS    { $$ = AST_inc_dec_asgn ($1, AST_INC); }
+|           var_types MINUSMINUS  { $$ = AST_inc_dec_asgn ($1, AST_DEC); }
+plus_plus:  var_types PLUSPLUS SEMICOLON    {$$ = AST_inc_dec_asgn ($1, AST_INC); }
+min_min:    var_types MINUSMINUS SEMICOLON  { $$ = AST_inc_dec_asgn ($1, AST_DEC); }
 lhs_seq:    IDENTIFIER IDENTIFIER                       { $$ = ASTVarDecStm($1.line_number, $1.value, $2.value, 0, NULL); }
 arrDec:     lhs_seq LBRACK RBRACK                       { $$ = $1; $1->u.varDecStm.arraydimension++; }
 |           arrDec LBRACK RBRACK                        { $$ = $1; $1->u.varDecStm.arraydimension++; }

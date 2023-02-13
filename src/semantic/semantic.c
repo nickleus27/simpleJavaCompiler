@@ -671,7 +671,7 @@ expressionRec analyzeExpression(environment typeEnv, environment functionEnv, en
     }
     case BoolLiteralExp:
     {
-      int value = exp->u.intLiteralExp.value;
+      int value = exp->u.boolLiteralExp.value;
       free(exp);
       return ExpressionRec( BooleanType(), ConstantExpression(value, BOOL));
     }
@@ -689,7 +689,6 @@ expressionRec analyzeExpression(environment typeEnv, environment functionEnv, en
     case VarExp:
     {
       expressionRec expRec = analyzeVar(typeEnv,functionEnv,varEnv,exp->u.varExp.var);
-      free(exp);
       return expRec;
     }
     case CallExp:
@@ -732,45 +731,59 @@ expressionRec analyzeVar(environment typeEnv, environment functionEnv, environme
   expressionRec baseType;
   switch(var->kind){
     case BaseVar:
+    {
       baseEntry = find(varEnv, var->u.baseVar.name);
       if ( !baseEntry ){
         /* return ExpressionRec(IntegerType(),NULL); */
         Error(var->line," Variable %s not defined",var->u.baseVar.name);
+        free(var);
         return ExpressionRec(NULL, ConstantExpression(0, 0));
       }
+      free(var);
       return ExpressionRec(baseEntry->u.varEntry.typ, BaseVariable(baseEntry->u.varEntry.offset, baseEntry->u.varEntry.typ->size_type));
       break;
+    }
     case ArrayVar:
+    {
       baseType = analyzeVar(typeEnv, functionEnv, varEnv, var->u.arrayVar.base);
       AATexpression indexExp = analyzeIndex(typeEnv, functionEnv, varEnv, var->u.arrayVar.index);
       /*ToDo: condense these if statements down to 1 for 1 error message */
       if(!baseType.typ){ 
         Error(var->line," Variable type is not array type");
+        free(var);
         /* return ExpressionRec(IntegerType(),NULL); */
         return ExpressionRec(NULL, ConstantExpression(0, 0));
       }
       if(baseType.typ->kind != array_type){
         Error(var->line," Variable type is not array type");
+        free(var);
         /* return ExpressionRec(IntegerType(),NULL); */
         return ExpressionRec(NULL, ConstantExpression(0, 0));
       }
+      free(var);
       return ExpressionRec(baseType.typ->u.array, ArrayVariable(baseType.tree, indexExp, baseType.typ->u.array->size_type, baseType.typ->u.array->size_type)); 
-    break;
+      break;
+    }
     case ClassVar:
+    {
       baseType = analyzeVar(typeEnv, functionEnv, varEnv, var->u.classVar.base);
       if (baseType.typ && baseType.typ->kind == class_type){
         baseEntry = find(baseType.typ->u.class.instancevars, var->u.classVar.instance);
         if ( !baseEntry ){
           Error(var->line," Variable %s not defined", var->u.classVar.instance);
+          free(var);
           /* return ExpressionRec(IntegerType(),NULL); */
           return ExpressionRec(NULL, ConstantExpression(0, 0));
         }
+        free(var);
         return ExpressionRec(baseEntry->u.varEntry.typ, ClassVariable(baseType.tree, baseEntry->u.varEntry.offset->offset, baseEntry->u.varEntry.typ->size_type));
       }else{
+        free(var);
         /* return ExpressionRec(IntegerType(),NULL); */
         return ExpressionRec(NULL, ConstantExpression(0, 0));
       }
-    break;
+      break;
+    }
     default:
     Error(var->line," Malformed Variable");
   }
@@ -786,8 +799,9 @@ expressionRec analyzeOpExpression(environment typeEnv, environment functionEnv, 
     {
       expressionRec LHS = analyzeExpression(typeEnv,functionEnv,varEnv,exp->u.opExp.left);
       expressionRec RHS = analyzeExpression(typeEnv,functionEnv,varEnv,exp->u.opExp.right);
-      if ((LHS.typ != IntegerType()) || (RHS.typ != IntegerType())) 
+      if ((LHS.typ != IntegerType()) || (RHS.typ != IntegerType())) {
 	      Error(exp->line," Both arguments to + must be integers");
+      }
       return ExpressionRec(IntegerType(),OperatorExpression(LHS.tree,RHS.tree,AAT_PLUS,INT));
     } 
     break;

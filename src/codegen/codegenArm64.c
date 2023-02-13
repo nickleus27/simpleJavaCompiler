@@ -68,6 +68,7 @@ void emit(char *assem,...) {
   fprintf(outfile,"\n");
 }
 
+// spill expression onto stack for use later (when all temp registers are in use)
 void pushExpStack() {
   if (exp_stack_offset == 0) {
     exp_stack_offset = 8;
@@ -83,6 +84,7 @@ void pushExpStack() {
   }
 }
 
+// move expression from stack for operation with accumulator
 void popExpStack() {
   if (exp_stack_offset) {
     emit("ldr %s, [%s, #%d]", Tmp0_64(), SP(), exp_stack_offset);
@@ -97,6 +99,7 @@ void popExpStack() {
   }
 }
 
+// move expression to temp registers for use later
 void pushExp(AATexpression tree){
   Register tempReg;
   switch (tree->size_type/4){
@@ -130,6 +133,7 @@ void pushExp(AATexpression tree){
   }
 }
 
+// pop regsister from temp register to Tmp0 for operation with accumulator
 void popExp(AATexpression tree) {
   Register tempReg;
   switch (tree->size_type/4){
@@ -166,25 +170,43 @@ void popExp(AATexpression tree) {
 void generateExpression(AATexpression tree){
   switch (tree->kind) {
     case AAT_MEMORY:
+    {
       generateMemoryExpression(tree);
+      //free(tree);
       break;
+    }
     case AAT_CONSTANT:
+    {
       generateConstantExp(tree);
+      free(tree);
       break;
+    }
     case AAT_OFFSET:
+    {
       generateConstantExp_offset(tree);
+      free(tree);
       break;
+    }
     case AAT_REGISTER:
+    {
       generateRegisterExp(tree);
+      //free(tree);
       break;
+    }
     case AAT_OPERATOR:
+    {
       generateLeftExp(tree->u.operator.left);
       generateRightExp(tree->u.operator.right);
       generateOpExp(tree);
+      //free(tree);
+    }
     break;
     case AAT_FUNCTIONCALL:
+    {
       generateFunCall(tree);
+      free(tree);
       break;
+    }
   }
 }
 void generateLeftExp(AATexpression tree) {
@@ -517,6 +539,7 @@ void addActualsToStack(AATexpressionList actual){
     }break;
     default: emit("Bad expression size type\n");
   }
+  free(actual);
 }
 void generateStatement(AATstatement tree) {
   switch (tree->kind) {
