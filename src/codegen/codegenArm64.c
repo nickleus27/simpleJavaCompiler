@@ -172,13 +172,13 @@ void generateExpression(AATexpression tree){
     case AAT_MEMORY:
     {
       generateMemoryExpression(tree);
-      //free(tree);
+      free(tree);
       break;
     }
     case AAT_CONSTANT:
     {
       generateConstantExp(tree);
-      //free(tree);
+      free(tree);
       break;
     }
     case AAT_OFFSET:
@@ -198,7 +198,7 @@ void generateExpression(AATexpression tree){
       generateLeftExp(tree->u.operator.left);
       generateRightExp(tree->u.operator.right);
       generateOpExp(tree);
-      //free(tree);
+      free(tree);
     }
     break;
     case AAT_FUNCTIONCALL:
@@ -210,8 +210,9 @@ void generateExpression(AATexpression tree){
   }
 }
 void generateLeftExp(AATexpression tree) {
+  int size = tree->size_type;
   generateExpression(tree);
-  pushExp(tree->size_type);
+  pushExp(size);
 }
 void generateRightExp(AATexpression tree) {
     switch(tree->size_type/4) {
