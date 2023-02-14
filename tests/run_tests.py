@@ -13,19 +13,20 @@ class Test_sJava_Files(unittest.TestCase):
     
     @classmethod
     def setUpClass(cls):
-        if not path.isfile(cls.sjc_exe):
-            src = "src"
-            build = "build"
-            buildPath = path.join(src, build)
-            system("(cd " + buildPath + " && make)")
+        src = "src"
+        build = "build"
+        buildPath = path.join(src, build)
+        #if not path.isfile(cls.sjc_exe):
+        system("(cd " + buildPath + " && make clean && make)")
+        #system("(cd " + buildPath + " && make)")
     
     @classmethod
     def tearDownClass(cls):
         src = "src"
         build = "build"
         buildPath = path.join(src, build)
-        if len([name for name in listdir(buildPath) if path.isfile(path.join(buildPath, name))]) > 1:
-            system("(cd " + buildPath + " && make clean)")
+        #if len([name for name in listdir(buildPath) if path.isfile(path.join(buildPath, name))]) > 1:
+        system("(cd " + buildPath + " && make clean)")
 
     def test_test0(self):
         test0 = path.join(self.dir, "test0.sjava")

@@ -736,9 +736,11 @@ expressionRec analyzeVar(environment typeEnv, environment functionEnv, environme
       if ( !baseEntry ){
         /* return ExpressionRec(IntegerType(),NULL); */
         Error(var->line," Variable %s not defined",var->u.baseVar.name);
+        free(var->u.baseVar.name);
         free(var);
         return ExpressionRec(NULL, ConstantExpression(0, 0));
       }
+      free(var->u.baseVar.name);
       free(var);
       return ExpressionRec(baseEntry->u.varEntry.typ, BaseVariable(baseEntry->u.varEntry.offset, baseEntry->u.varEntry.typ->size_type));
       break;
@@ -771,13 +773,16 @@ expressionRec analyzeVar(environment typeEnv, environment functionEnv, environme
         baseEntry = find(baseType.typ->u.class.instancevars, var->u.classVar.instance);
         if ( !baseEntry ){
           Error(var->line," Variable %s not defined", var->u.classVar.instance);
+          free(var->u.classVar.instance);
           free(var);
           /* return ExpressionRec(IntegerType(),NULL); */
           return ExpressionRec(NULL, ConstantExpression(0, 0));
         }
+        free(var->u.classVar.instance);
         free(var);
         return ExpressionRec(baseEntry->u.varEntry.typ, ClassVariable(baseType.tree, baseEntry->u.varEntry.offset->offset, baseEntry->u.varEntry.typ->size_type));
       }else{
+        free(var->u.classVar.instance);
         free(var);
         /* return ExpressionRec(IntegerType(),NULL); */
         return ExpressionRec(NULL, ConstantExpression(0, 0));

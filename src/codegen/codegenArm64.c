@@ -637,6 +637,7 @@ void generateMove(AATstatement tree) {
   } else {
     fprintf(stderr,"Bad MOVE node -- LHS should be T_mem or T_register\n");
   }
+  //free(tree->u.move.lhs->u.memory);
 }
 
 void generateMemoryExpression(AATexpression tree) {

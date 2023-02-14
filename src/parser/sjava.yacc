@@ -34,11 +34,13 @@ ASTvariable ASTclassArray(ASTvariable first, ASTvariable third){
 //this clones the variable so that memory can be deleted in tree traversal in semantic.c
 ASTstatement AST_inc_dec_asgn (ASTvariable var, AST_INC_DEC inc_dec) {
     ASTvariable dupVar;
+    char* name;
     switch(var->kind){
         case BaseVar:
         {
             printf("BASE VAR DUP FOR ++ OR --\n");
-            dupVar = ASTBaseVar(var->line, var->u.baseVar.name);
+            name = strdup(var->u.baseVar.name);
+            dupVar = ASTBaseVar(var->line, name);
             break;
         }
         case ClassVar:
