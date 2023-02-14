@@ -100,9 +100,9 @@ void popExpStack() {
 }
 
 // move expression to temp registers for use later
-void pushExp(AATexpression tree){
+void pushExp(int size_type){
   Register tempReg;
-  switch (tree->size_type/4){
+  switch (size_type/4){
     case SWITCH_BYTE:
       tempReg = pushExpReg32();
       if (tempReg) {
@@ -134,9 +134,9 @@ void pushExp(AATexpression tree){
 }
 
 // pop regsister from temp register to Tmp0 for operation with accumulator
-void popExp(AATexpression tree) {
+void popExp(int size_type) {
   Register tempReg;
-  switch (tree->size_type/4){
+  switch (size_type/4){
     case SWITCH_BYTE:
       tempReg = popExpReg32();
       if (tempReg) {
@@ -178,7 +178,7 @@ void generateExpression(AATexpression tree){
     case AAT_CONSTANT:
     {
       generateConstantExp(tree);
-      free(tree);
+      //free(tree);
       break;
     }
     case AAT_OFFSET:
@@ -211,7 +211,7 @@ void generateExpression(AATexpression tree){
 }
 void generateLeftExp(AATexpression tree) {
   generateExpression(tree);
-  pushExp(tree);
+  pushExp(tree->size_type);
 }
 void generateRightExp(AATexpression tree) {
     switch(tree->size_type/4) {
@@ -393,7 +393,7 @@ void generateFunCall(AATexpression tree){
 }
 
 void generateOpExp64(AATexpression tree){
-  popExp(tree);
+  popExp(tree->size_type);
   if (tree->u.operator.left->size_type == REG32) { //if size types dont match
     emit("sxtw %s, %s", Tmp0_64(), Tmp0_32());
   }
@@ -462,7 +462,7 @@ void generateOpExp64(AATexpression tree){
 }
 
 void generateOpExp32(AATexpression tree){
-  popExp(tree);
+  popExp(tree->size_type);
   switch (tree->u.operator.op){
     case AAT_PLUS:
       emit("add %s, %s, %s", Acc32(), Tmp0_32(), Acc32());
@@ -623,10 +623,11 @@ void generateMove(AATstatement tree) {
       emit("mov %s, %s", tree->u.move.lhs->u.reg, Acc32());
     }
   } else if (tree->u.move.lhs->kind == AAT_MEMORY) {
-      generateExpression(tree->u.move.lhs->u.memory);//bypass dereference value @ mem addresss & just get address
-      pushExp(tree->u.move.lhs->u.memory); //memory will have size type 8 bytes
-      generateExpression(tree->u.move.rhs);
-      popExp(tree->u.move.lhs->u.memory); //memory to pop address back into xn register
+    int size = tree->u.move.lhs->u.memory->size_type;
+    generateExpression(tree->u.move.lhs->u.memory);//bypass dereference value @ mem addresss & just get address
+    pushExp(size); //memory will have size type 8 bytes
+    generateExpression(tree->u.move.rhs);
+    popExp(size); //memory to pop address back into xn register
     if(tree->u.move.size == REG32){
       emit("str %s, [%s]", Acc32(), Tmp0_64()); //implement move
     }else if (tree->u.move.size == REG64 ){
