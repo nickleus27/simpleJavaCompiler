@@ -14,11 +14,20 @@
 #include "AATBuildTree.h"
 #include <stdlib.h>
 
+/* globals */
+label_ref allocate = NULL;
 
 /*------------------ Expressions ------------------*/
 AATexpression Allocate(AATexpression size) {
+  AATexpression allocExp;
   AATexpressionList actuals = AATExpressionList(size, NULL, REG32, 16);
-  return AATFunctionCall(new_label_ref("allocate"),actuals, PTR, 32);
+  if (!allocate) {
+    allocate = new_label_ref("allocate");
+    allocExp = AATFunctionCall(allocate, actuals, PTR, 32);
+    LABEL_REF_DEC(allocate)
+  }
+  allocExp = AATFunctionCall(allocate, actuals, PTR, 32);
+  return allocExp;
 }
 
 AATexpression ClassVariable(AATexpression base, int offset, int size_type){
