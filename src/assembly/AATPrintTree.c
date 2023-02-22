@@ -43,11 +43,11 @@ void printAAT(AATstatement body) {
     break;
   case AAT_JUMP:
     printAATindent(AATindent);
-    printf("JUMP: %s\n",body->u.jump);
+    printf("JUMP: %s\n",body->u.jump->label);
     break;
   case AAT_CONDITIONALJUMP:
     printAATindent(AATindent);
-    printf("COND JUMP: %s\n",body->u.conditionalJump.jump);
+    printf("COND JUMP: %s\n",body->u.conditionalJump.jump->label);
     AATindent++;
     printAATexp(body->u.conditionalJump.test);
     AATindent--;
@@ -70,7 +70,7 @@ void printAAT(AATstatement body) {
     break;
   case AAT_PROCEDURECALL:
     printAATindent(AATindent);
-    printf("PROCEDURE CALL: %s\n",body->u.procedureCall.jump);
+    printf("PROCEDURE CALL: %s\n",body->u.procedureCall.jump->label);
     AATindent++;
     printExpList(body->u.procedureCall.actuals);
     AATindent--;
@@ -85,7 +85,7 @@ void printAAT(AATstatement body) {
     break;
   case AAT_LABEL:
     printAATindent(AATindent);
-    printf("LABEL: %s\n",body->u.label);
+    printf("LABEL: %s\n",body->u.label->label);
     break;
 
   case AAT_RETURN:
@@ -126,7 +126,7 @@ void printAATexp(AATexpression exp) {
     break;
   case AAT_FUNCTIONCALL:
     printAATindent(AATindent);
-    printf("CALL: %s\n", exp->u.functionCall.jump);
+    printf("CALL: %s\n", exp->u.functionCall.jump->label);
     AATindent++;
     printExpList(exp->u.functionCall.actuals);
     AATindent--;

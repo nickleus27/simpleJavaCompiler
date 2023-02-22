@@ -5,9 +5,10 @@
  * 10/18/2022
  * 
 */
+//#include "../lib/label_ref.h"
 
 envEntry VarEntry(type typ, int offset);
-envEntry FunctionEntry(type returntyp, typeList formals, Label startLabel, Label endLabel);
+envEntry FunctionEntry(type returntyp, typeList formals, label_ref startLabel, label_ref endLabel);
 envEntry TypeEntry(type typ);
 void setArgMemSize(envEntry functionEntry, int size);
 
@@ -24,8 +25,8 @@ struct envEntry_ {
       int argMemSize;
       type returntyp;
       typeList formals;
-      Label startLabel;
-      Label endLabel;
+      label_ref startLabel;
+      label_ref endLabel;
     } functionEntry;
     struct {
       type typ;

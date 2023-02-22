@@ -18,7 +18,7 @@
 /*------------------ Expressions ------------------*/
 AATexpression Allocate(AATexpression size) {
   AATexpressionList actuals = AATExpressionList(size, NULL, REG32, 16);
-  return AATFunctionCall("allocate",actuals, PTR, 32);
+  return AATFunctionCall(NewNamedLabel("allocate"),actuals, PTR, 32);
 }
 
 AATexpression ClassVariable(AATexpression base, int offset, int size_type){
@@ -48,11 +48,11 @@ AATexpression ConstantExpression(int value, int size_type){
  return AATConstant(value, size_type);
 }
 
-AATexpression CallExpression(AATexpressionList actuals, Label name, int size_type, int argMemSize){
+AATexpression CallExpression(AATexpressionList actuals, label_ref name, int size_type, int argMemSize){
   return AATFunctionCall( name, actuals, size_type, argMemSize);
 }
 
-AATstatement CallStatement(AATexpressionList actuals, Label name, int argMemSize){
+AATstatement CallStatement(AATexpressionList actuals, label_ref name, int argMemSize){
   return AATProcedureCall( name, actuals, argMemSize);
 }
 
@@ -61,11 +61,11 @@ AATexpression OperatorExpression(AATexpression left, AATexpression right, AATope
 }
 
 /*------------------ Statements ------------------*/
-AATstatement functionDefinition(AATstatement body, int framesize, Label start, Label end){
+AATstatement functionDefinition(AATstatement body, int framesize, label_ref start, label_ref end){
  return AATFunctionDef(AATSequential(AATLabel(start), AATLabel(end)), body, framesize);
 }
 
-AATstatement ReturnStatement(AATexpression value, Label functionend, int size_type){
+AATstatement ReturnStatement(AATexpression value, label_ref functionend, int size_type){
   if(size_type==PTR){
     return AATSequential(AATMove(AATRegister(Result64(), PTR), value, PTR), AATJump(functionend));
   }else if(size_type==INT){
@@ -78,18 +78,21 @@ AATstatement ReturnStatement(AATexpression value, Label functionend, int size_ty
 }
 
 AATstatement DoWhileStatement(AATexpression test, AATstatement dowhilebody){
-  Label doWhile = NewNamedLabel("doWhile"), doEnd = NewNamedLabel("doEnd");
-  return
-  AATSequential(AATLabel(doWhile),
-    AATSequential(dowhilebody,
-      AATSequential(AATConditionalJump(test, doWhile), AATLabel(doEnd))
-    )
-  );
+  label_ref doWhile = NewNamedLabel("doWhile"), doEnd = NewNamedLabel("doEnd");
+  AATstatement retval =
+    AATSequential(AATLabel(doWhile),
+      AATSequential(dowhilebody,
+        AATSequential(AATConditionalJump(test, doWhile), AATLabel(doEnd))
+      )
+    );
+  LABEL_REF_DEC(doWhile)
+  LABEL_REF_DEC(doEnd)
+  return retval;
 }
 
 AATstatement ForStatement(AATstatement init, AATexpression test, AATstatement increment, AATstatement body){
-  Label forTest = NewNamedLabel("forTest"), forStart = NewNamedLabel("forStart"), forEnd = NewNamedLabel("forEnd");
-  return
+  label_ref forTest = NewNamedLabel("forTest"), forStart = NewNamedLabel("forStart"), forEnd = NewNamedLabel("forEnd");
+  AATstatement retval =
   AATSequential(init,
     AATSequential(AATJump(forTest),
       AATSequential(AATLabel(forStart),
@@ -103,49 +106,62 @@ AATstatement ForStatement(AATstatement init, AATexpression test, AATstatement in
       )
     )
   );
+  LABEL_REF_DEC(forTest)
+  LABEL_REF_DEC(forStart)
+  LABEL_REF_DEC(forEnd)
+  return retval;
 }
 
 AATstatement WhileStatement(AATexpression test, AATstatement whilebody){
   /* TODO: is whileEnd needed ??? it seems to not be used */
-  Label whileTest = NewNamedLabel("whileTest"), whileStart = NewNamedLabel("whileStart"),
+  label_ref whileTest = NewNamedLabel("whileTest"), whileStart = NewNamedLabel("whileStart"),
     whileEnd = NewNamedLabel("whileEnd");
-  return
-  AATSequential( AATJump(whileTest),
-    AATSequential( AATLabel(whileStart),
-      AATSequential( whilebody,
-        AATSequential( AATLabel(whileTest),
-          AATSequential( AATConditionalJump(test, whileStart), AATLabel(whileEnd) 
+  AATstatement retval =
+    AATSequential( AATJump(whileTest),
+      AATSequential( AATLabel(whileStart),
+        AATSequential( whilebody,
+          AATSequential( AATLabel(whileTest),
+            AATSequential( AATConditionalJump(test, whileStart), AATLabel(whileEnd) 
+            )
           )
         )
       )
-    )
-  );
+    );
+  LABEL_REF_DEC(whileTest)
+  LABEL_REF_DEC(whileStart)
+  LABEL_REF_DEC(whileEnd)
+  return retval;
 }
 AATstatement IfStatement(AATexpression test, AATstatement ifbody, AATstatement elsebody){
-  Label iftrue = NewNamedLabel("IFTRUE"), ifend = NewNamedLabel("IFEND");
-  if( elsebody )
-    return
-    AATSequential( AATConditionalJump( test, iftrue ),
-      AATSequential( elsebody,
+  label_ref iftrue = NewNamedLabel("IFTRUE"), ifend = NewNamedLabel("IFEND");
+  AATstatement retval;
+  if( elsebody ) {
+    retval = 
+      AATSequential( AATConditionalJump( test, iftrue ),
+        AATSequential( elsebody,
+          AATSequential( AATJump( ifend ),
+            AATSequential( AATLabel(iftrue),
+              AATSequential( ifbody, AATLabel(ifend)
+              )
+            )
+          )
+        )
+      );
+  } else {
+    /* Can the if statement made to be more efficient? */
+    retval =
+      AATSequential( AATConditionalJump( test, iftrue ),
         AATSequential( AATJump( ifend ),
           AATSequential( AATLabel(iftrue),
             AATSequential( ifbody, AATLabel(ifend)
             )
           )
         )
-      )
-    );
-  else
-  /* Can the if statement made to be more efficient? */
-    return
-    AATSequential( AATConditionalJump( test, iftrue ),
-      AATSequential( AATJump( ifend ),
-        AATSequential( AATLabel(iftrue),
-          AATSequential( ifbody, AATLabel(ifend)
-          )
-        )
-      )
-    );
+      );
+  }
+  LABEL_REF_DEC(iftrue)
+  LABEL_REF_DEC(ifend)
+  return retval;
 }
 
 AATstatement AssignmentStatement(AATexpression lhs, AATexpression rhs, int size){

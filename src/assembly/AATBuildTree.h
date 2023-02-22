@@ -19,16 +19,16 @@ typedef enum {AAT_PLUS, AAT_MINUS, AAT_MULTIPLY, AAT_DIVIDE, AAT_LT,
               */
 
 /*statements*/
-AATstatement functionDefinition(AATstatement body, int framesize, Label start, Label end);
+AATstatement functionDefinition(AATstatement body, int framesize, label_ref start, label_ref end);
 AATstatement IfStatement(AATexpression test, AATstatement ifbody, AATstatement elsebody);
 AATstatement WhileStatement(AATexpression test, AATstatement whilebody);
 AATstatement DoWhileStatement(AATexpression test, AATstatement dowhilebody);
 AATstatement ForStatement(AATstatement init, AATexpression test, AATstatement increment, AATstatement body);
 AATstatement EmptyStatement(void);
-AATstatement CallStatement(AATexpressionList actuals, Label name, int argMemSize);
+AATstatement CallStatement(AATexpressionList actuals, label_ref name, int argMemSize);
 AATstatement AssignmentStatement(AATexpression lhs, AATexpression rhs, int size);
 AATstatement SequentialStatement(AATstatement first, AATstatement second);
-AATstatement ReturnStatement(AATexpression value, Label functionend, int size_type);
+AATstatement ReturnStatement(AATexpression value, label_ref functionend, int size_type);
 
 /*expressions*/
 AATexpression Allocate(AATexpression size);
@@ -37,6 +37,6 @@ AATexpression ArrayVariable(AATexpression base, AATexpression index, int element
 AATexpression ClassVariable(AATexpression base, int offset, int size_type);
 AATexpression ConstantExpression(int value, int size_type);
 AATexpression OperatorExpression(AATexpression left, AATexpression right, AAToperator operator, int size_type);
-AATexpression CallExpression(AATexpressionList actuals, Label name, int size_type, int argMemSize);
+AATexpression CallExpression(AATexpressionList actuals, label_ref name, int size_type, int argMemSize);
 
 AATexpressionList ActualList(AATexpression first, AATexpressionList rest, int size_type, int offset);

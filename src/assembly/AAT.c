@@ -73,31 +73,31 @@ AATstatement AATMove(AATexpression lhs, AATexpression rhs, int size) {
   return retval;
 }
 
-AATstatement AATLabel(Label label) {
+AATstatement AATLabel(label_ref label) {
   AATstatement retval = (AATstatement) malloc(sizeof(struct AATstatement_));
   retval->kind = AAT_LABEL;
-  retval->u.label = label;
+  ASN_LABEL_REF(label, retval->u.label)
   return retval;
 }
-AATstatement AATJump(Label jump) {
+AATstatement AATJump(label_ref jump) {
   AATstatement retval = (AATstatement) malloc(sizeof(struct AATstatement_));
   retval->kind = AAT_JUMP;
-  retval->u.jump = jump;
+  ASN_LABEL_REF(jump, retval->u.jump)
   return retval;
 }
 
-AATstatement AATConditionalJump(AATexpression test,Label jump) {
+AATstatement AATConditionalJump(AATexpression test, label_ref jump) {
   AATstatement retval = (AATstatement) malloc(sizeof(struct AATstatement_));
   retval->kind = AAT_CONDITIONALJUMP;
-  retval->u.conditionalJump.jump = jump;
+  ASN_LABEL_REF(jump, retval->u.conditionalJump.jump)
   retval->u.conditionalJump.test = test;
   return retval;
 }
 
-AATstatement AATProcedureCall(Label jump, AATexpressionList actuals, int argMemSize) {
+AATstatement AATProcedureCall(label_ref jump, AATexpressionList actuals, int argMemSize) {
   AATstatement retval = (AATstatement) malloc(sizeof(struct AATstatement_));
   retval->kind = AAT_PROCEDURECALL;
-  retval->u.procedureCall.jump = jump;
+  ASN_LABEL_REF(jump, retval->u.procedureCall.jump)
   retval->u.procedureCall.actuals = actuals;
   retval->u.procedureCall.argMemSize = argMemSize;
   return retval;
@@ -151,11 +151,11 @@ AATexpression AATOperator(AATexpression left, AATexpression right, AAToperator o
   retval->u.operator.op = op;
   return retval;
 }
-AATexpression AATFunctionCall(Label jump, AATexpressionList actuals, int size_type, int argMemSize) {
+AATexpression AATFunctionCall(label_ref jump, AATexpressionList actuals, int size_type, int argMemSize) {
   AATexpression retval = (AATexpression) malloc(sizeof(struct AATexpression_));
   retval->kind = AAT_FUNCTIONCALL;
   retval->size_type = size_type;
-  retval->u.functionCall.jump = jump;
+  ASN_LABEL_REF(jump, retval->u.functionCall.jump)
   retval->u.functionCall.actuals = actuals;
   retval->u.functionCall.argMemSize = argMemSize;
   return retval;

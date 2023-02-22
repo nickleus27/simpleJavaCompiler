@@ -264,12 +264,15 @@ AATstatement analyzeFunction(environment typeEnv, environment functionEnv, envir
       envEntry retType = find(typeEnv, function->u.prototype.returntype);
       if( !retType ) Error(function->line, " %s is not a type", function->u.prototype.returntype);
       typeList formalList = analyzeFormalList( typeEnv, functionEnv ,  varEnv,  function->u.prototype.formals);
+      label_ref startLabel = NewNamedLabel(function->u.prototype.name), endLabel = NewNamedLabel(function->u.prototype.name);
       if(retType) {
         enter( functionEnv, function->u.prototype.name, FunctionEntry(retType->u.typeEntry.typ, formalList,
-        NewNamedLabel(function->u.prototype.name), NewLabel()));
+        startLabel, endLabel));
       }
       free(function->u.prototype.returntype);
       free(function);
+      LABEL_REF_DEC(startLabel)
+      LABEL_REF_DEC(endLabel)
       return EmptyStatement();
     }
     break;
@@ -281,9 +284,13 @@ AATstatement analyzeFunction(environment typeEnv, environment functionEnv, envir
         envEntry retType = find(typeEnv, function->u.prototype.returntype);
         if( !retType ) Error(function->line, " %s is not a type", function->u.prototype.returntype);
         typeList formalList = analyzeFormalList( typeEnv, functionEnv ,  varEnv,  function->u.prototype.formals);
-        if(retType)
+        if(retType){
+          label_ref startLabel = NewNamedLabel(function->u.prototype.name), endLabel = NewNamedLabel(function->u.prototype.name);
           enter( functionEnv, function->u.prototype.name, FunctionEntry(retType->u.typeEntry.typ, formalList,
-            NewNamedLabel(function->u.prototype.name), NewLabel()));
+            startLabel, endLabel));
+          LABEL_REF_DEC(startLabel)
+          LABEL_REF_DEC(endLabel)
+        }
         funType = find(functionEnv, function->u.prototype.name );
       }
       typeList formalList = funType->u.functionEntry.formals;
@@ -319,7 +326,7 @@ AATstatement analyzeFunction(environment typeEnv, environment functionEnv, envir
     }
     break;
     Error(function->line, " Error analyzing function.");
-    return functionDefinition(EmptyStatement(), 0, "error", "error");
+    return functionDefinition(EmptyStatement(), 0, NULL, NULL);
   }
 }
 

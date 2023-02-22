@@ -17,7 +17,7 @@
 #include "environment2.h"
 #include "../codegen/MachineDependent.h"
 #include "../lib/offset_ref.h"
-#include "../lib/label_ref.h"
+//#include "../lib/label_ref.h"
 /* Use a reasonable (PRIME!) hash table size */
 #define HASHTABLESIZE 503
 
@@ -109,9 +109,8 @@ while(env->stack) {
     env->stack = env->stack->next;
     envEntry function = find(env, temp->key);
     H_delete(env->table,temp->key);
-    // TODO: add label ref to function type and AAT
-    //LABEL_REF_DEC (function->u.functionEntry.endLabel);
-    //LABEL_REF_DEC (function->u.functionEntry.startLabel);
+    LABEL_REF_DEC(function->u.functionEntry.startLabel)
+    LABEL_REF_DEC(function->u.functionEntry.endLabel)
     free(function);
     free(temp->key);
     free(temp);
@@ -227,7 +226,8 @@ void AddBuiltinTypes(environment env) {
 void AddBuiltinFunctions(environment env) {
   typeList formals = NULL;
   //enter(env, "Read", FunctionEntry(IntegerType(),NULL,"Read","Readend"));
-  enter(env, strndup("printInt", strlen("printInt")+1), FunctionEntry(VoidType(),TypeList(IntegerType(), NULL, 8),"printInt","printIntEnd"));
+  enter(env, strndup("printInt", strlen("printInt")+1),
+    FunctionEntry(VoidType(),TypeList(IntegerType(), NULL, 8), NewNamedLabel("printInt"), NewNamedLabel("printIntEnd")));
   //enter(env, "Print", FunctionEntry(VoidType(), TypeList(IntegerType(), NULL),
 	//			    "Print","Printend"));
 }
@@ -258,13 +258,14 @@ envEntry VarEntry(type typ, int offset) {
   return retval;
 }
 
-envEntry FunctionEntry(type returntyp, typeList formals, Label startLabel, Label endLabel) {
+envEntry FunctionEntry(type returntyp, typeList formals, label_ref startLabel, label_ref endLabel) {
   envEntry retval = (envEntry) malloc(sizeof(struct envEntry_));
   retval->kind = Function_Entry;
   retval->u.functionEntry.returntyp = returntyp;
   retval->u.functionEntry.formals = formals;
   retval->u.functionEntry.startLabel = startLabel;
-  retval->u.functionEntry.endLabel = endLabel;
+  ASN_LABEL_REF(startLabel, retval->u.functionEntry.startLabel)
+  ASN_LABEL_REF(endLabel, retval->u.functionEntry.endLabel)
   return retval;
 }
 

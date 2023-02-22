@@ -37,13 +37,13 @@ struct AATstatement_ {
       AATexpression rhs;
       int size;
     } move;
-    Label jump;
+    label_ref jump;
     struct {
       AATexpression test;
-      Label jump;
+      label_ref jump;
     } conditionalJump;
     struct {
-      Label jump;
+      label_ref jump;
       AATexpressionList actuals;
       int argMemSize;
     } procedureCall;
@@ -52,11 +52,11 @@ struct AATstatement_ {
       AATstatement right;
     } sequential;
     struct{
-      AATstatement labels; //sequential containing labels
+      AATstatement labels; //sequential containing labels. left is start, and right is end
       AATstatement body;
       int framesize;
     }functionDef;
-    Label label;
+    label_ref label;
   } u;
 };
 
@@ -74,7 +74,7 @@ struct AATexpression_ {
       AAToperator op;
     } operator;
     struct {
-      Label jump;
+      label_ref jump;
       AATexpressionList actuals;
       int argMemSize;
     } functionCall;
@@ -84,10 +84,10 @@ struct AATexpression_ {
 /*statements*/
 AATexpressionList AATExpressionList(AATexpression first, AATexpressionList rest, int size_type, int offset);
 AATstatement AATMove(AATexpression lhs, AATexpression rhs, int size);
-AATstatement AATLabel(Label);
-AATstatement AATJump(Label jump);
-AATstatement AATConditionalJump(AATexpression test,Label jump);
-AATstatement AATProcedureCall(Label jump, AATexpressionList actuals, int argMemSize);
+AATstatement AATLabel(label_ref);
+AATstatement AATJump(label_ref jump);
+AATstatement AATConditionalJump(AATexpression test, label_ref jump);
+AATstatement AATProcedureCall(label_ref jump, AATexpressionList actuals, int argMemSize);
 AATstatement AATSequential(AATstatement left, AATstatement right);
 AATstatement AATEmpty(void);
 AATstatement AATReturn(void);
@@ -100,7 +100,7 @@ AATexpression AATOffset(offset_ref offset, int size_type);
 AATexpression AATRegister(Register reg, int size_type);
 AATexpression AATMemory(AATexpression mem, int size_type);
 AATexpression AATOperator(AATexpression left, AATexpression right, AAToperator op, int size_type);
-AATexpression AATFunctionCall(Label jump, AATexpressionList actuals, int size_type, int argMemSize);
+AATexpression AATFunctionCall(label_ref jump, AATexpressionList actuals, int size_type, int argMemSize);
 
 /* statement stack functions */
 void AATpush(AATstatement stm);

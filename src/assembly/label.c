@@ -17,7 +17,13 @@ H_hashTable labelTab;
 
 int firsttime = 1;
 
-
+label_ref
+new_label_ref(Label label) {
+    label_ref ref = (label_ref)malloc(sizeof(struct label_ref_));
+    ref->count = 1;
+    ref->label = label;
+    return ref;
+}
 
 Label NewLabel(void) {
   int last;
@@ -37,7 +43,7 @@ Label NewLabel(void) {
   
 }
 
-Label NewNamedLabel(char *name) {
+label_ref NewNamedLabel(char *name) {
   int last;
   char *retval;
 
@@ -52,7 +58,7 @@ Label NewNamedLabel(char *name) {
   strcpy(retval,name);
   sprintf(&retval[strlen(name)],"000");
   sprintf(&retval[strlen(name)],"%d",last+1);
-  return retval;
+  return new_label_ref(retval);
 }
 
 char *GetLabelName(Label l) {

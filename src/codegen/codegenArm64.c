@@ -344,17 +344,18 @@ void restoreTempReg() {
 }
 
 void generateFunCall(AATexpression tree){
+  label_ref jump = tree->u.functionCall.jump;
   switch(tree->size_type/4){// devide by 4 to minimize space 1/4==0, 4/4==1, 8/4==2
     case SWITCH_BYTE:
       saveTempReg();
       if (tree->u.functionCall.argMemSize){
         emit("add %s, %s, #-%d", SP(), SP(), tree->u.functionCall.argMemSize);
         addActualsToStack(tree->u.functionCall.actuals);
-        emit("bl %s", tree->u.functionCall.jump);
+        emit("bl %s", jump->label);
         emit("mov %s, %s", Acc32(), Result32());
         emit("add %s, %s, #%d", SP(), SP(), tree->u.functionCall.argMemSize);
       } else {
-        emit("bl %s", tree->u.functionCall.jump);
+        emit("bl %s", jump->label);
         emit("mov %s, %s", Acc32(), Result32());
       }
       restoreTempReg();
@@ -364,11 +365,11 @@ void generateFunCall(AATexpression tree){
       if (tree->u.functionCall.argMemSize){
         emit("add %s, %s, #-%d", SP(), SP(), tree->u.functionCall.argMemSize);
         addActualsToStack(tree->u.functionCall.actuals);
-        emit("bl %s", tree->u.functionCall.jump);
+        emit("bl %s", jump->label);
         emit("mov %s, %s", Acc32(), Result32());
         emit("add %s, %s, #%d", SP(), SP(), tree->u.functionCall.argMemSize);
       } else {
-        emit("bl %s", tree->u.functionCall.jump);
+        emit("bl %s", jump->label);
         emit("mov %s, %s", Acc32(), Result32());
       }
       restoreTempReg();
@@ -378,11 +379,11 @@ void generateFunCall(AATexpression tree){
       if (tree->u.functionCall.argMemSize){
         emit("add %s, %s, #-%d", SP(), SP(), tree->u.functionCall.argMemSize);
         addActualsToStack(tree->u.functionCall.actuals);
-        emit("bl %s", tree->u.functionCall.jump);
+        emit("bl %s", jump->label);
         emit("mov %s, %s", Acc64(), Result64());
         emit("add %s, %s, #%d", SP(), SP(), tree->u.functionCall.argMemSize);
       } else {
-        emit("bl %s", tree->u.functionCall.jump);
+        emit("bl %s", jump->label);
         emit("mov %s, %s", Acc64(), Result64());
       }
       restoreTempReg();
@@ -391,6 +392,7 @@ void generateFunCall(AATexpression tree){
       emit("/*BAD FUNCTION CALL EXPRESSION*/\n");
       break;
   }
+  LABEL_REF_DEC(jump)
 }
 
 void generateOpExp64(AATexpression tree){
@@ -545,31 +547,37 @@ void addActualsToStack(AATexpressionList actual){
 void generateStatement(AATstatement tree) {
   switch (tree->kind) {
     case AAT_MOVE:
+    {
       generateMove(tree);
       break;
+    }
     case AAT_JUMP:
-      emit("b %s", tree->u.jump);
+    {
+      label_ref jump = tree->u.jump;
+      emit("b %s", jump->label);
+      LABEL_REF_DEC(jump)
       break;
+    }
     case AAT_CONDITIONALJUMP:
+    {
+      label_ref jump = tree->u.conditionalJump.jump;
       generateExpression(tree->u.conditionalJump.test);
       emit("cmp %s, #1", Acc32());
-      emit("b.eq %s", tree->u.conditionalJump.jump);
+      emit("b.eq %s", jump->label);
+      LABEL_REF_DEC(jump)
       break;
+    }
     case AAT_FUNCDEF:
     {
-      /**
-       * TODO: STACKFRAME REG OFFSET HERE!
-       * 
-       */
       int localVarSize = tree->u.functionDef.framesize - 2*8; /* saving 2 reegisters lr, fp */
-      generateStatement(tree->u.functionDef.labels->u.sequential.left);
+      generateStatement(tree->u.functionDef.labels->u.sequential.left); // start label
       /* assembly code fore saving registers and adjusting pointers*/
       emit("add %s, %s, #-%d", SP(), SP(), tree->u.functionDef.framesize);
       emit("str %s, [%s, #%d]", FP(), SP(), localVarSize);
       emit("add %s, %s, #%d", FP(), SP(), localVarSize);
       emit("str %s, [%s, #%d]", ReturnAddr(), FP(), DWORD);
       generateStatement(tree->u.functionDef.body);
-      generateStatement(tree->u.functionDef.labels->u.sequential.right);
+      generateStatement(tree->u.functionDef.labels->u.sequential.right); // end label
       emit("ldr %s, [%s, #%d]", ReturnAddr(), FP(), DWORD);
       emit("ldr %s, [%s]", FP(), FP());
       emit("add %s, %s, #%d", SP(), SP(), tree->u.functionDef.framesize);
@@ -577,6 +585,7 @@ void generateStatement(AATstatement tree) {
     }
     break;
     case AAT_PROCEDURECALL:
+    {
       /**
        * adjust stack pointer for argMemSize
        * walk actual/formal list and add to stack according to offsets
@@ -584,30 +593,45 @@ void generateStatement(AATstatement tree) {
        * move sp back up the size of argMemSize
        */
       saveTempReg();
+      label_ref jump = tree->u.procedureCall.jump;
       if (tree->u.procedureCall.argMemSize){ // check if need to add args to stack
         emit("add %s, %s, #-%d", SP(), SP(), tree->u.procedureCall.argMemSize);
         addActualsToStack(tree->u.procedureCall.actuals);
-        emit("bl %s", tree->u.procedureCall.jump);
+        emit("bl %s", jump->label);
         emit("add %s, %s, #%d", SP(), SP(), tree->u.procedureCall.argMemSize);
       } else {
-        emit("bl %s", tree->u.procedureCall.jump);
+        emit("bl %s", jump->label);
       }
+      LABEL_REF_DEC(jump)
       restoreTempReg();
       break;
+    }
     case AAT_SEQ:
+    {
       generateStatement(tree->u.sequential.left);
       generateStatement(tree->u.sequential.right);
       break;
+    }
     case AAT_EMPTY:
+    {
       break;
+    }
     case AAT_LABEL:
-      emit("%s:", tree->u.label);
+    {
+      label_ref label = tree->u.label;
+      emit("%s:", label->label);
+      LABEL_REF_DEC(label)
       break;
+    }
     case AAT_RETURN:
+    {
       emit("ret");
       break;
+    }
     case AAT_HALT:
+    {
       break;
+    }
   }
   free(tree);
 }
