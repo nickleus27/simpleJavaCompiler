@@ -18,7 +18,7 @@
 /*------------------ Expressions ------------------*/
 AATexpression Allocate(AATexpression size) {
   AATexpressionList actuals = AATExpressionList(size, NULL, REG32, 16);
-  return AATFunctionCall(NewNamedLabel("allocate"),actuals, PTR, 32);
+  return AATFunctionCall(new_label_ref("allocate"),actuals, PTR, 32);
 }
 
 AATexpression ClassVariable(AATexpression base, int offset, int size_type){

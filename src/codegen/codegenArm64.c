@@ -707,7 +707,7 @@ emit(".zerofill __DATA,__common,_free_list,8,3\n");
 
 void emitPrintInt(void) {
   /*print integer function*/
-  emit("printInt1:");
+  emit("printInt:");
   emit(
     "\tadd sp, sp, #-32   //push down the stack\n"
     "\tstr fp, [sp, #16]  //store fp\n"
@@ -792,7 +792,7 @@ void emitPrintInt(void) {
 }
 
 void emitAllocate(void) {
-emit("allocate1:                              ; @allocate1");
+emit("allocate:                              ; @allocate");
 emit("; %%bb.0:");
 emit("\tsub\tsp, sp, #96");
 emit("\tadrp\tx8, _free_list@PAGE");

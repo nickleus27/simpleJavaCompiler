@@ -227,7 +227,7 @@ void AddBuiltinFunctions(environment env) {
   typeList formals = NULL;
   //enter(env, "Read", FunctionEntry(IntegerType(),NULL,"Read","Readend"));
   enter(env, strndup("printInt", strlen("printInt")+1),
-    FunctionEntry(VoidType(),TypeList(IntegerType(), NULL, 8), NewNamedLabel("printInt"), NewNamedLabel("printIntEnd")));
+    FunctionEntry(VoidType(),TypeList(IntegerType(), NULL, 8), new_label_ref("printInt"), new_label_ref("printIntEnd")));
   //enter(env, "Print", FunctionEntry(VoidType(), TypeList(IntegerType(), NULL),
 	//			    "Print","Printend"));
 }
