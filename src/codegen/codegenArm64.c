@@ -190,7 +190,7 @@ void generateExpression(AATexpression tree){
     case AAT_REGISTER:
     {
       generateRegisterExp(tree);
-      //free(tree);
+      free(tree);
       break;
     }
     case AAT_OPERATOR:
