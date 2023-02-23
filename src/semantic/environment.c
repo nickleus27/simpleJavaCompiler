@@ -112,6 +112,7 @@ while(env->stack) {
     while (formalList) {
       typeList formal = formalList;
       formalList = formalList->rest;
+      OFFSET_REF_DEC(formal->offset)
       free(formal);
     }
     H_delete(env->table,temp->key);
