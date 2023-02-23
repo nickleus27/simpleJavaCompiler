@@ -11,6 +11,7 @@
 typedef char  *Register;
 typedef struct ExpStack_ *ExpStack;
 
+void freeRegisters(void);
 Register FP(void);
 Register SP(void);
 Register Result32(void);

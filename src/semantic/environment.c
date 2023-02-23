@@ -108,6 +108,12 @@ while(env->stack) {
     stackElem temp = env->stack;
     env->stack = env->stack->next;
     envEntry function = find(env, temp->key);
+    typeList formalList = function->u.functionEntry.formals;
+    while (formalList) {
+      typeList formal = formalList;
+      formalList = formalList->rest;
+      free(formal);
+    }
     H_delete(env->table,temp->key);
     LABEL_REF_DEC(function->u.functionEntry.startLabel)
     LABEL_REF_DEC(function->u.functionEntry.endLabel)
@@ -201,11 +207,12 @@ int endScope(environment env) {
       }break;
       default: break;
     }
-    H_delete(env->table,env->stack->key);
+    H_delete(env->table, env->stack->key);
     OFFSET_REF_DEC(var->u.varEntry.offset);
     free(var);
     temp = env->stack;
     env->stack = env->stack->next;
+    free(temp->key);
     free(temp);
   }
   /* Remove Stack Marker */

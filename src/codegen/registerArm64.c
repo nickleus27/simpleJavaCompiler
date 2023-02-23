@@ -41,6 +41,72 @@ struct ExpStack_{
   Register expStack64[EXP_REGISTERS];
 };
 
+void freeRegisters() {
+  if (R_fp) {
+    free(R_fp);
+  }
+  if (R_sp) {
+    free(R_sp);
+  }
+  if (R_result32) {
+    free(R_result32);
+  }
+  if (R_result64) {
+    free(R_result64);
+  }
+  if (R_return) {
+    free(R_return);
+  }
+  if (R_acc32) {
+    free(R_acc32);
+  }
+  if (R_acc64) {
+    free(R_acc64);
+  }
+  if (R_zero) {
+    free(R_zero);
+  }
+  if (R32_tmp0) {
+    free(R32_tmp0);
+  }
+  if (R32_tmp1) {
+    free(R32_tmp1);
+  }
+  if (R32_tmp2) {
+    free(R32_tmp2);
+  }
+  if (R32_tmp3) {
+    free(R32_tmp3);
+  }
+  if (R32_tmp4) {
+    free(R32_tmp4);
+  }
+  if (R32_tmp5) {
+    free(R32_tmp5);
+  }
+  if (R64_tmp0) {
+    free(R64_tmp0);
+  }
+  if (R64_tmp1) {
+    free(R64_tmp1);
+  }
+  if (R64_tmp2) {
+    free(R64_tmp2);
+  }
+  if (R64_tmp3) {
+    free(R64_tmp3);
+  }
+  if (R64_tmp4) {
+    free(R64_tmp4);
+  }
+  if (R64_tmp5) {
+    free(R64_tmp5);
+  }
+  if (expStack) {
+    free(expStack);
+  }
+}
+
 Register FP(void) {
   if (R_fp == NULL) {
     R_fp = (char *) malloc(sizeof(char)*3);

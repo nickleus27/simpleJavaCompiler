@@ -55,6 +55,7 @@ void generateCode(AATstatement tree, FILE *output) {
   emitSetupCode();
   generateStatement(tree);
   emitLibrary();
+  freeRegisters();
   fprintf(output,"\n");
 }
 

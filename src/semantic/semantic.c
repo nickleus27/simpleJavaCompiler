@@ -387,8 +387,11 @@ expressionRec analyzeCallExp(environment typeEnv, environment functionEnv, envir
         current = current->rest;
       }
     }
+    /* TODO: create loop to continue freeing lists in situation where list size differ */
+    ASTexpressionList expTemp = actualList;
     formalList = formalList->rest;
     actualList = actualList->rest;
+    free(expTemp);
   }
   if( formalList != NULL || actualList != NULL)
     Error(exp->line, " Number of actuals differs from formals");
@@ -446,8 +449,11 @@ AATexpressionList analyzeCallStm(environment typeEnv, environment functionEnv, e
         current = current->rest;
       }
     }
+    /* TODO: create loop to continue freeing lists in situation where list size differ */
+    ASTexpressionList expTemp = actualList;
     formalList = formalList->rest;
     actualList = actualList->rest;
+    free(expTemp);
   }
   if( formalList != NULL || actualList != NULL)
     Error(statement->line, " Number of actuals differs from formals");
