@@ -371,19 +371,33 @@ expressionRec analyzeCallExp(environment typeEnv, environment functionEnv, envir
       }
       switch (formalList->first->kind){
         case integer_type:
+        {
           Error(actualList->line, " Acutal type does not match formal int type");
           break;
+        }
         case boolean_type: 
+        {
           Error(actualList->line, " Acutal type does not match formal boolean type");
           break;
+        }
         case void_type:
+        {
           Error(actualList->line, " Acutal type does not match formal void type");
+          break;
+        }
 	      case class_type:
+        {
+          if (expRec.typ == NullType()) {
+            break;
+          }
           Error(actualList->line, " Acutal type does not match formal class type");
           break;
+        }
         case  array_type:
+        {
           Error(actualList->line, " Acutal type does not match formal array type");
           break;
+        }
         default:
           Error(actualList->line, " Bad statement");
       }
@@ -433,19 +447,33 @@ AATexpressionList analyzeCallStm(environment typeEnv, environment functionEnv, e
       }
       switch (formalList->first->kind){
         case integer_type:
+        {
           Error(actualList->line, " Acutal type does not match formal int type");
           break;
-        case boolean_type: 
+        }
+        case boolean_type:
+        {
           Error(actualList->line, " Acutal type does not match formal boolean type");
           break;
+        }
         case void_type:
+        {
           Error(actualList->line, " Acutal type does not match formal void type");
+          break;
+        }
 	      case class_type:
+        {
+          if (exp.typ == NullType()) {
+            break;
+          }
           Error(actualList->line, " Acutal type does not match formal class type");
           break;
+        }
         case  array_type:
+        {
           Error(actualList->line, " Acutal type does not match formal array type");
           break;
+        }
         default:
           Error(actualList->line, " Bad statement");
       }

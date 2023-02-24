@@ -3,14 +3,19 @@ class test{
     test next;
 }
 
+test testStack(int data, test next) {
+    test t = new test();
+    t.data = data;
+    t.next = next;
+    return t;
+}
+
 void main(){
-    test test0 = new test();
-    test0.data = 499;
-    test0.next = null;
-    test test1 = new test();
-    test1.data = 500;
-    test1.next = test0;
-    test temp = test1;
+    test t = testStack(0, null);
+    for (int i = 1; i<=20; i++) {
+        t = testStack(i, t);
+    }
+    test temp = t;
     while(temp != null) {
         printInt(temp.data);
         temp = temp.next;
