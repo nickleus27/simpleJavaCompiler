@@ -93,12 +93,10 @@ int main(int argc, char **argv)
       strcat(ldCmd, ".o");
       strcat(ldCmd, ldPost);
       system(ldCmd);
-    }
-    else
-    {
+    } else {
       printf("# of errors = %d", numErrors());
     }
   }
-
+  free(outfilename);
   return 0;
 }

@@ -252,6 +252,9 @@ typeList analyzeFormalList(environment typeEnv, environment functionEnv, environ
   if(!formals) return NULL;
   typeList head = analyzeFormalList(typeEnv, functionEnv, varEnv, formals->rest);
   envEntry formType = analyzeFormal( typeEnv, functionEnv, varEnv, formals->first);
+  //free(formals->first->type);
+  //free(formals->first);
+  //free(formals);
   return TypeList(formType->u.typeEntry.typ, head, formType->u.typeEntry.typ->size_type);
 }
 
@@ -740,6 +743,7 @@ expressionRec analyzeExpression(environment typeEnv, environment functionEnv, en
     case VarExp:
     {
       expressionRec expRec = analyzeVar(typeEnv,functionEnv,varEnv,exp->u.varExp.var);
+      free(exp);
       return expRec;
     }
     case CallExp:
