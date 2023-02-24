@@ -11,8 +11,8 @@ test testStack(int data, test next) {
 }
 
 void main(){
-    test t = testStack(0, null);
-    for (int i = 1; i<=20; i++) {
+    test t = testStack(21, null);
+    for (int i = 20; i>=0; i--) {
         t = testStack(i, t);
     }
     test temp = t;
