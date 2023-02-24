@@ -539,6 +539,7 @@ AATstatement analyzeStatement(environment typeEnv, environment functionEnv, envi
         enter( varEnv, statement->u.varDecStm.name, VarEntry( varType->u.typeEntry.typ, varType->u.typeEntry.typ->size_type ) );
         envEntry LHS = find(varEnv, statement->u.varDecStm.name);
         enter_arm64(functionStack, LHS->u.varEntry.scope, LHS->u.varEntry.offset);
+        free(statement->u.varDecStm.type);
 
         /* check initialization types match */
         if( statement->u.varDecStm.init ){
