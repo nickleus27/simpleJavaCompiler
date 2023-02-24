@@ -278,20 +278,23 @@ AATstatement analyzeFunction(environment typeEnv, environment functionEnv, envir
     break;
     case FunctionDef:
     {
+      bool hasProto = false;
       /* analyze function signature (formals). if not found add to function environment*/
-      envEntry funType = find(functionEnv, function->u.prototype.name );
-      if ( !funType ){
-        envEntry retType = find(typeEnv, function->u.prototype.returntype);
-        if( !retType ) Error(function->line, " %s is not a type", function->u.prototype.returntype);
-        typeList formalList = analyzeFormalList( typeEnv, functionEnv ,  varEnv,  function->u.prototype.formals);
+      envEntry funType = find(functionEnv, function->u.functionDef.name );
+      if ( !funType ) {
+        envEntry retType = find(typeEnv, function->u.functionDef.returntype);
+        if( !retType ) Error(function->line, " %s is not a type", function->u.functionDef.returntype);
+        typeList formalList = analyzeFormalList( typeEnv, functionEnv ,  varEnv,  function->u.functionDef.formals);
         if(retType){
-          label_ref startLabel = NewNamedLabel(function->u.prototype.name), endLabel = NewNamedLabel(function->u.prototype.name);
-          enter( functionEnv, function->u.prototype.name, FunctionEntry(retType->u.typeEntry.typ, formalList,
+          label_ref startLabel = NewNamedLabel(function->u.functionDef.name), endLabel = NewNamedLabel(function->u.functionDef.name);
+          enter( functionEnv, function->u.functionDef.name, FunctionEntry(retType->u.typeEntry.typ, formalList,
             startLabel, endLabel));
           LABEL_REF_DEC(startLabel)
           LABEL_REF_DEC(endLabel)
         }
-        funType = find(functionEnv, function->u.prototype.name );
+        funType = find(functionEnv, function->u.functionDef.name );
+      } else {
+        hasProto = true;
       }
       typeList formalList = funType->u.functionEntry.formals;
       visitFormals( typeEnv, varEnv, formalList, function, function->u.functionDef.formals );
@@ -310,7 +313,7 @@ AATstatement analyzeFunction(environment typeEnv, environment functionEnv, envir
       GLOBfunctPtr = find(functionEnv, function->u.functionDef.name);
       AATstatement stmPtr = visitStatementList(typeEnv, functionEnv, varEnv, function->u.functionDef.body);
       if( !RETURN_FLAG && GLOBfunctPtr->u.functionEntry.returntyp != VoidType() || RETURN_FLAG == NON_VOID_TYPE)
-        Error(function->line, " Function does not return type %s", function->u.prototype.returntype);
+        Error(function->line, " Function does not return type %s", function->u.functionDef.returntype);
       //GLOBfunctPtr = NULL;
       //RETURN_FLAG = NO_RETURN_TYPE;
       //offset = 0;
@@ -320,13 +323,19 @@ AATstatement analyzeFunction(environment typeEnv, environment functionEnv, envir
       addMemSizes(functionStack, getMemTotals());
       resetMemTotals();//need to call this at the end of analyzing stack memory
       AATseqStmCleanUp( stmPtr );
+      if (hasProto) {
+        free(function->u.functionDef.name);
+      }
       free(function->u.functionDef.returntype);
       free(function);
       return functionDefinition(AATpop(), generateStackMemory(functionStack), GLOBfunctPtr->u.functionEntry.startLabel, GLOBfunctPtr->u.functionEntry.endLabel);
     }
     break;
-    Error(function->line, " Error analyzing function.");
-    return functionDefinition(EmptyStatement(), 0, NULL, NULL);
+    default:
+    {
+      Error(function->line, " Error analyzing function.");
+      return functionDefinition(EmptyStatement(), 0, NULL, NULL);
+    }
   }
 }
 
@@ -565,10 +574,12 @@ AATstatement analyzeStatement(environment typeEnv, environment functionEnv, envi
       envEntry function = find(functionEnv, statement->u.callStm.name);
       if ( function ) {
         AATexpressionList expList = analyzeCallStm(typeEnv, functionEnv, varEnv, statement);
+        free(statement->u.callStm.name);
         free(statement);
         return CallStatement(expList, function->u.functionEntry.startLabel, function->u.functionEntry.argMemSize);
       }
       Error(statement->line, " Cannot find function %s", statement->u.callStm.name);
+      free(statement->u.callStm.name);
       free(statement);
       return EmptyStatement();
     }
@@ -649,10 +660,8 @@ expressionRec analyzeNewExp(environment typeEnv, ASTexpression exp){
     envEntry expType = find(typeEnv, exp->u.newExp.name);
     if( !expType ) return ExpressionRec( NULL, ConstantExpression(0, 0));
     if( expType->u.typeEntry.typ->kind != class_type) return ExpressionRec( NULL, ConstantExpression(0, 0));
-    /*need to update envSize function to calculate correct memory size*/
-    return ExpressionRec( expType->u.typeEntry.typ, Allocate( 
-      ConstantExpression( 
-        envSize(expType->u.typeEntry.typ->u.class.instancevars), INT)));
+    return ExpressionRec( expType->u.typeEntry.typ,
+      Allocate(ConstantExpression(envSize(expType->u.typeEntry.typ->u.class.instancevars), INT)));
 }
 
 expressionRec analyzeNewArray(environment typeEnv, environment functionEnv, environment varEnv, ASTexpression exp){
@@ -707,18 +716,21 @@ expressionRec analyzeExpression(environment typeEnv, environment functionEnv, en
     case CallExp:
     {
       expressionRec expRec = analyzeCallExp(typeEnv, functionEnv, varEnv, exp);
+      free(exp->u.callExp.name);
       free(exp);
       return expRec;
     }
     case NewExp:
     {
       expressionRec expRec = analyzeNewExp(typeEnv, exp);
+      free(exp->u.newExp.name);
       free(exp);
       return expRec;
     }
     case NewArrayExp:
     {
       expressionRec expRec = analyzeNewArray(typeEnv, functionEnv, varEnv, exp);
+      free(exp->u.newArrayExp.name);
       free(exp);
       return expRec;
     }
