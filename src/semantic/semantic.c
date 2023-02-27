@@ -63,7 +63,7 @@ AATexpression analyzeIndex(environment typeEnv, environment functionEnv, environ
 expressionRec visitClassVar(environment typeEnv, environment functionEnv,environment varEnv, ASTvariable var);
 envEntry analyzeFormal(environment typeEnv, environment functionEnv, environment varEnv, ASTformal formal);
 void visitFormals(environment typeEnv, environment varEnv, typeList protoList, ASTfunctionDec function, ASTformalList formals);
-typeList analyzeFormalList(environment typeEnv, environment functionEnv, environment varEnv, ASTformalList formals);
+typeList analyzeFormalList(environment typeEnv, environment functionEnv, environment varEnv, ASTformalList formals, bool isProtoType);
 envEntry enterArrayType(environment typeEnv, envEntry varType, int array_dim, char* array_type);
 
 expressionRec ExpressionRec(type typ, AATexpression tree) {
@@ -176,6 +176,7 @@ void analyzeInstanceVarDecList(environment typeEnv, environment classVarEnv, env
     enter_arm64(classStack, 0 /*scope is always 0 for class memory*/, insVar->u.varEntry.offset);
   }
   free(varList->first->type);
+  free(varList->first);
   free(varList);
 }
 
@@ -248,13 +249,15 @@ void visitFormals(environment typeEnv, environment varEnv, typeList protoList, A
 }
 
 /* adds functiondef/functionproto formals to typeList and returns list */
-typeList analyzeFormalList(environment typeEnv, environment functionEnv, environment varEnv, ASTformalList formals){
+typeList analyzeFormalList(environment typeEnv, environment functionEnv, environment varEnv, ASTformalList formals, bool isProtoType){
   if(!formals) return NULL;
-  typeList head = analyzeFormalList(typeEnv, functionEnv, varEnv, formals->rest);
+  typeList head = analyzeFormalList(typeEnv, functionEnv, varEnv, formals->rest, isProtoType);
   envEntry formType = analyzeFormal( typeEnv, functionEnv, varEnv, formals->first);
-  //free(formals->first->type);
-  //free(formals->first);
-  //free(formals);
+  if (isProtoType) {
+    free(formals->first->type);
+    free(formals->first);
+    free(formals);
+  }
   return TypeList(formType->u.typeEntry.typ, head, formType->u.typeEntry.typ->size_type);
 }
 
@@ -266,7 +269,7 @@ AATstatement analyzeFunction(environment typeEnv, environment functionEnv, envir
     {
       envEntry retType = find(typeEnv, function->u.prototype.returntype);
       if( !retType ) Error(function->line, " %s is not a type", function->u.prototype.returntype);
-      typeList formalList = analyzeFormalList( typeEnv, functionEnv ,  varEnv,  function->u.prototype.formals);
+      typeList formalList = analyzeFormalList( typeEnv, functionEnv ,  varEnv,  function->u.prototype.formals, true);
       label_ref startLabel = NewNamedLabel(function->u.prototype.name), endLabel = NewNamedLabel(function->u.prototype.name);
       if(retType) {
         enter( functionEnv, function->u.prototype.name, FunctionEntry(retType->u.typeEntry.typ, formalList,
@@ -287,7 +290,7 @@ AATstatement analyzeFunction(environment typeEnv, environment functionEnv, envir
       if ( !funType ) {
         envEntry retType = find(typeEnv, function->u.functionDef.returntype);
         if( !retType ) Error(function->line, " %s is not a type", function->u.functionDef.returntype);
-        typeList formalList = analyzeFormalList( typeEnv, functionEnv ,  varEnv,  function->u.functionDef.formals);
+        typeList formalList = analyzeFormalList( typeEnv, functionEnv ,  varEnv,  function->u.functionDef.formals, false);
         if(retType){
           label_ref startLabel = NewNamedLabel(function->u.functionDef.name), endLabel = NewNamedLabel(function->u.functionDef.name);
           enter( functionEnv, function->u.functionDef.name, FunctionEntry(retType->u.typeEntry.typ, formalList,

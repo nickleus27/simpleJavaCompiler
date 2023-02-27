@@ -33,9 +33,9 @@ AATexpression Allocate(AATexpression size) {
 AATexpression ClassVariable(AATexpression base, int offset, int size_type){
   if ( offset ) {
     return AATMemory( AATOperator(base, AATConstant(offset, REG64), AAT_PLUS, REG64), size_type);
-  }
-  else
+  } else {
     return AATMemory( base, size_type ); /* if no offset do not need to subtract from memory */
+  }
 }
 
 AATexpression ArrayVariable(AATexpression base, AATexpression index, int elementSize, int size_type){
