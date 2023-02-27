@@ -173,25 +173,21 @@ void generateExpression(AATexpression tree){
     case AAT_MEMORY:
     {
       generateMemoryExpression(tree);
-      free(tree);
       break;
     }
     case AAT_CONSTANT:
     {
       generateConstantExp(tree);
-      free(tree);
       break;
     }
     case AAT_OFFSET:
     {
       generateConstantExp_offset(tree);
-      free(tree);
       break;
     }
     case AAT_REGISTER:
     {
       generateRegisterExp(tree);
-      free(tree);
       break;
     }
     case AAT_OPERATOR:
@@ -199,16 +195,15 @@ void generateExpression(AATexpression tree){
       generateLeftExp(tree->u.operator.left);
       generateRightExp(tree->u.operator.right);
       generateOpExp(tree);
-      free(tree);
     }
     break;
     case AAT_FUNCTIONCALL:
     {
       generateFunCall(tree);
-      free(tree);
       break;
     }
   }
+  free(tree);
 }
 void generateLeftExp(AATexpression tree) {
   int size = tree->size_type;
@@ -661,6 +656,7 @@ void generateMove(AATstatement tree) {
     }else if (tree->u.move.size == BYTE ){
       emit("strb %s, [%s]", Acc32(), Tmp0_64()); //implement move
     }
+    free(tree->u.move.lhs);
   } else {
     fprintf(stderr,"Bad MOVE node -- LHS should be T_mem or T_register\n");
   }

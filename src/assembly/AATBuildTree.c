@@ -50,7 +50,9 @@ AATexpression ArrayVariable(AATexpression base, AATexpression index, int element
 }
 
 AATexpression BaseVariable(offset_ref offset, int size_type){
-  return AATMemory( AATOperator(AATRegister( FP(), REG64),AATOffset( offset, REG64 ), AAT_PLUS, REG64), size_type);
+  AATexpression opExp = AATOperator(AATRegister(FP(), REG64), AATOffset(offset, REG64), AAT_PLUS, REG64);
+  AATexpression memExp = AATMemory( opExp, size_type);
+  return memExp;
 }
 
 AATexpression ConstantExpression(int value, int size_type){
