@@ -578,6 +578,7 @@ void generateStatement(AATstatement tree) {
       emit("ldr %s, [%s]", FP(), FP());
       emit("add %s, %s, #%d", SP(), SP(), tree->u.functionDef.framesize);
       emit("ret");
+      free(tree->u.functionDef.labels);
     }
     break;
     case AAT_PROCEDURECALL:
