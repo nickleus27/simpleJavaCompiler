@@ -3,6 +3,8 @@ class test{
     test next;
 }
 
+test testStack(int data, test next);
+
 test testStack(int data, test next) {
     test t = new test();
     t.data = data;

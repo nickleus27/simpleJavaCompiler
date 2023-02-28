@@ -636,11 +636,11 @@ void generateMove(AATstatement tree) {
   /* Generates inefficient assembly */
   if (tree->u.move.lhs->kind == AAT_REGISTER) {
     generateExpression(tree->u.move.rhs);
-    if(tree->u.move.size == REG32){
+    if (tree->u.move.size == REG32) {
       emit("mov %s, %s", tree->u.move.lhs->u.reg, Acc32());
-    }else if(tree->u.move.size == REG64 ){
+    } else if (tree->u.move.size == REG64 ) {
       emit("mov %s, %s", tree->u.move.lhs->u.reg, Acc64());
-    }else if(tree->u.move.size == BYTE){
+    } else if (tree->u.move.size == BYTE) {
       emit("mov %s, %s", tree->u.move.lhs->u.reg, Acc32());
     }
   } else if (tree->u.move.lhs->kind == AAT_MEMORY) {
@@ -649,18 +649,17 @@ void generateMove(AATstatement tree) {
     pushExp(size); //memory will have size type 8 bytes
     generateExpression(tree->u.move.rhs);
     popExp(size); //memory to pop address back into xn register
-    if(tree->u.move.size == REG32){
+    if (tree->u.move.size == REG32) {
       emit("str %s, [%s]", Acc32(), Tmp0_64()); //implement move
-    }else if (tree->u.move.size == REG64 ){
+    } else if (tree->u.move.size == REG64 ) {
       emit("str %s, [%s]", Acc64(), Tmp0_64()); //implement move
-    }else if (tree->u.move.size == BYTE ){
+    } else if (tree->u.move.size == BYTE ) {
       emit("strb %s, [%s]", Acc32(), Tmp0_64()); //implement move
     }
-    free(tree->u.move.lhs);
   } else {
     fprintf(stderr,"Bad MOVE node -- LHS should be T_mem or T_register\n");
   }
-  //free(tree->u.move.lhs->u.memory);
+  free(tree->u.move.lhs);
 }
 
 void generateMemoryExpression(AATexpression tree) {
