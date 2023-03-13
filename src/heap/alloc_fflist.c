@@ -4,8 +4,8 @@
  * @brief This is a heap implementation that uses first fit strategy
  * when searching the free list. The heap maintains a singly linked 
  * list, and worst case search is linear.
- * @version 0.1
- * @date 2022-11-17
+ * @version 0.2
+ * @date 2023-03-12
  * 
  * @copyright Copyright (c) 2022
  * 
@@ -15,6 +15,26 @@
 
 
 #define MAX_HEAP_SIZE 8176000 /* 8176000 == 8176 kb */
+/**
+ * @brief [0, 1,...]
+ *        [(0) size of block, (1) points to next free block, ...(free space)...] 
+ */
+#define FIRST_FREE_BLOCK(size, first, prev, next, ret) { size = (*(int*)first); \
+    prev = first; \
+    next = first; \
+    next++; \
+    ret = next; \
+}
+#define NEXT_FREE_BLOCK(size, prev, curr, next, ret) { prev = next; \
+    next = *next; \
+    curr = next; \
+    next++; \
+    ret = next; \
+    size = (*(int*)curr); \
+}
+#define HAS_NEXT_FREE_BLOCK *next_ptr
+#define SET_BLOCK_SIZE(pointer, size) { (*(int*)pointer) = size; }
+#define UPDATE_LINKS(prev, next, size) { *prev = (char*)(next) + size; next = *prev; }
 
 /**
  * @brief https://stackoverflow.com/questions/2529185/what-are-cfi-directives-in-gnu-assembler-gas-used-for
@@ -32,29 +52,27 @@ void* allocate(int size) {
     while (size % 8) { //8 byte aligned
         size++;
     }
-    /* initialize heap pointer*/
+    /* initialize heap pointer */
     if (!free_list) {
         free_list = &free_list + 1; //add 1 == 8 bytes ->first free space
         /* 8176000 == 8176 kb */
         /* dereference to assign value and cast to int* */
         (*(int*)free_list) = MAX_HEAP_SIZE; //assign totals free space
     }
-    void** ret;
+    int free_block_size;
     void** prev_ptr;
     void** next_ptr;
-    prev_ptr = free_list;
-    next_ptr = prev_ptr+1;
+    void** ret;
+    FIRST_FREE_BLOCK(free_block_size, free_list, prev_ptr, next_ptr, ret)
+
     /**
      * @brief (free_list pointer) points to a end of free chain
      */
-    if ( !*next_ptr ) { //free_list is pointing to end/beginning of free list
-        if ( size <= (*(int*)prev_ptr) ) {
-            ret = next_ptr;
-            free_list = (char*)(next_ptr) + size;
-            int free_size = (*(int*)prev_ptr);
-            (*(int*)prev_ptr) = size;
-            prev_ptr = free_list;
-            (*(int*)prev_ptr) = free_size - size;
+    if ( !HAS_NEXT_FREE_BLOCK ) { //free_list is pointing to end/beginning of free list
+        if ( size <= free_block_size ) {
+            free_list = (char*)(next_ptr) + size; // move free_list beyond allocated block
+            SET_BLOCK_SIZE(prev_ptr, size) // set allocated block size
+            SET_BLOCK_SIZE(free_list, free_block_size - size) // set new free block size
             return ret;
         }
         return 0;
@@ -64,13 +82,10 @@ void* allocate(int size) {
      * @brief if not at end of free chain but first free block and
      * (free_list pointer) points to a big enough chunk of memory
      */
-    if ( size < (*(int*)prev_ptr) ) {
-        ret = next_ptr;
-        free_list = (char*)(next_ptr) + size;
-        int free_size = (*(int*)prev_ptr);
-        (*(int*)prev_ptr) = size;
-        prev_ptr = free_list;
-        (*(int*)prev_ptr) = free_size - size;
+    if ( size < free_block_size ) {
+        free_list = (char*)(next_ptr) + size; // move free_list beyond allocated block
+        SET_BLOCK_SIZE(prev_ptr, size) // set allocated block size
+        SET_BLOCK_SIZE(free_list, free_block_size - size) // set new free block size
         return ret;
     }
     /**
@@ -79,41 +94,32 @@ void* allocate(int size) {
      * (free_list pointer) points to a an equal size chunk of memory
      * free_size does not need to be updated, just point free_list to
      */
-    if ( size == (*(int*)prev_ptr) ) {
-        ret = next_ptr;
+    if ( size == free_block_size ) {
         free_list = *next_ptr;
         return ret;
     }
 
-    prev_ptr++; // points to next_link
-    next_ptr = *next_ptr; //now pointing at size tag
     // search free list for big enough free space for allocation 
-    // list goes free_list[0]==size, free_list[1] == next
-    int nodeSize = (*(int*)next_ptr);
-    while ( *next_ptr && nodeSize < size ) {
-        next_ptr++; //now pointing at next link
-        prev_ptr = next_ptr; //next link
-        next_ptr = *next_ptr; //move to next node...points at size tag
-        nodeSize = (*(int*)next_ptr); // store the size
+    void** curr_ptr;
+    NEXT_FREE_BLOCK(free_block_size, prev_ptr, curr_ptr, next_ptr, ret)
+    while ( *next_ptr && free_block_size < size ) {
+        NEXT_FREE_BLOCK(free_block_size, prev_ptr, curr_ptr, next_ptr, ret)
     }
 
     /**
      * TODO: Need to Test!
      * If at end of free chain
      */
-    void** next_link = next_ptr+1;
+
     //pointing at end of free chain
-    if (!next_link) {
+    if (!*next_ptr) {
         /**
          * TODO: NEED TO TEST!
          */
-        if ( size <= nodeSize ) {
-            ret = next_link;
-            int free_size = (*(int*)next_ptr);
-            (*(int*)next_ptr) = size;
-            *next_link = (char*)(next_link) + size;
-            next_link = *next_link;
-            (*(int*)next_link) = free_size - size;
+        if ( size <= free_block_size ) {
+            SET_BLOCK_SIZE(curr_ptr, size) // set allocated block size
+            UPDATE_LINKS(prev_ptr, next_ptr, size) // set prev pointer beyond allocated block to next free block
+            SET_BLOCK_SIZE(next_ptr, free_block_size - size) // reduce size of next free block
             return ret;
         }
         /**
@@ -127,13 +133,10 @@ void* allocate(int size) {
      * @brief if not at end of free chain but first free block and
      * prev_pointer points to a big enough chunk of memory
      */
-    if ( size < nodeSize ) {
-        ret = next_link;
-        int free_size = (*(int*)next_ptr);
-        (*(int*)next_ptr) = size;
-        *prev_ptr = (char*)(next_link) + size;
-        next_link = *prev_ptr;
-        (*(int*)next_link) = free_size - size;
+    if ( size < free_block_size ) {
+        SET_BLOCK_SIZE(curr_ptr, size) // set allocated block size
+        UPDATE_LINKS(prev_ptr, next_ptr, size) // set prev point beyond allocated block to next free block
+        SET_BLOCK_SIZE(next_ptr, free_block_size - size) // reduce size of next free block
         return ret;
     }
 
@@ -143,9 +146,8 @@ void* allocate(int size) {
      * prev_pointer points to a an equal size chunk of memory
      * free_size does not need to be updated, just point free_list to
      */
-    if ( size == nodeSize ) {
-        ret = next_link;
-        *prev_ptr = *next_link;
+    if ( size == free_block_size ) {
+        *prev_ptr = *next_ptr;
         return ret;
     }
 
