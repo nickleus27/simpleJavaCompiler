@@ -796,8 +796,8 @@ emit("\tadrp\tx8, _free_list@PAGE");
 emit("\tadd\tx8, x8, _free_list@PAGEOFF");
 emit("\tadd\tx8, x8, #8");
 emit("\tstr\tx8, [sp, #16]                   ; 8-byte Folded Spill");
-emit("\tldr\tw0, [sp, #112]");
-emit("\tstr\tw0, [sp, #84]");
+emit("\tldr\tw0, [sp, #112]");    // loaded: is this where size arg is stored in new stack frame?
+emit("\tstr\tw0, [sp, #84]");     // stored:
 emit("\tldr\tw8, [sp, #84]");
 emit("\tadd\tw8, w8, #8");
 emit("\tstr\tw8, [sp, #84]");

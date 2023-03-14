@@ -16,7 +16,8 @@
 
 #define MAX_HEAP_SIZE 8176000 /* 8176000 == 8176 kb */
 /**
- * @brief [0, 1,...]
+ * @brief Each free block has these 2 values followed by a block of free memory
+ *        [0, 1,...]
  *        [(0) size of block, (1) points to next free block, ...(free space)...] 
  */
 #define FIRST_FREE_BLOCK(size, first, prev, next, ret) { \
@@ -47,6 +48,13 @@
 void* free_list[MAX_HEAP_SIZE/8];
 
 void* allocate(int size) {
+    // inline assembly to save argument passed in at proper location expected
+    // for sjava language. run make assembly
+    #if !defined(DEBUG)
+    __asm__ ( /* inline assembly statement*/
+        "\tldr\tw0, [sp, #96] //save size arg into this frames memory"
+    );
+    #endif
     //+8 to store size tag, and +8 for storing next tag will be applied by the size % 8
     // for example size == 1, 1+8 ==9, while(size % 8) size++ == 16
     size += 8; //+8 for store size tag
