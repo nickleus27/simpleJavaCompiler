@@ -12,4 +12,4 @@
  */
 
 void* allocate(int size);
-extern void* free_list;
+extern void* free_list[8176000/8];

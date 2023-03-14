@@ -19,9 +19,10 @@
  * @brief [0, 1,...]
  *        [(0) size of block, (1) points to next free block, ...(free space)...] 
  */
-#define FIRST_FREE_BLOCK(size, first, prev, next, ret) { size = (*(int*)first); \
-    prev = first; \
-    next = first; \
+#define FIRST_FREE_BLOCK(size, first, prev, next, ret) { \
+    prev = *first; \
+    size = (*(int*)prev); \
+    next = *first; \
     next++; \
     ret = next; \
 }
@@ -43,7 +44,7 @@
  * TODO: Also get rid of library includes up top, and the exit call...hand write in the exit to assembly
  */
 
-void* free_list = 0;
+void* free_list[MAX_HEAP_SIZE/8];
 
 void* allocate(int size) {
     //+8 to store size tag, and +8 for storing next tag will be applied by the size % 8
@@ -53,11 +54,12 @@ void* allocate(int size) {
         size++;
     }
     /* initialize heap pointer */
-    if (!free_list) {
-        free_list = &free_list + 1; //add 1 == 8 bytes ->first free space
+    if (!*free_list) {
+        *free_list = free_list + 1; //add 1 == 8 bytes ->first free space
         /* 8176000 == 8176 kb */
         /* dereference to assign value and cast to int* */
-        (*(int*)free_list) = MAX_HEAP_SIZE; //assign totals free space
+        (*(int*)(free_list+1)) = MAX_HEAP_SIZE - 32; //assign totals free space (-8 pointer -16 for last free block that holds size=0, next=null)
+                
     }
     int free_block_size;
     void** prev_ptr;
@@ -70,9 +72,11 @@ void* allocate(int size) {
      */
     if ( !HAS_NEXT_FREE_BLOCK ) { //free_list is pointing to end/beginning of free list
         if ( size <= free_block_size ) {
-            free_list = (char*)(next_ptr) + size; // move free_list beyond allocated block
+            *free_list = (char*)(next_ptr) + size; // move free_list beyond allocated block
             SET_BLOCK_SIZE(prev_ptr, size) // set allocated block size
-            SET_BLOCK_SIZE(free_list, free_block_size - size) // set new free block size
+            next_ptr = *free_list;
+            SET_BLOCK_SIZE(next_ptr, free_block_size - size) // set new free block size
+                    
             return ret;
         }
         return 0;
@@ -83,9 +87,10 @@ void* allocate(int size) {
      * (free_list pointer) points to a big enough chunk of memory
      */
     if ( size < free_block_size ) {
-        free_list = (char*)(next_ptr) + size; // move free_list beyond allocated block
+        *free_list = (char*)(next_ptr) + size; // move free_list beyond allocated block
         SET_BLOCK_SIZE(prev_ptr, size) // set allocated block size
-        SET_BLOCK_SIZE(free_list, free_block_size - size) // set new free block size
+        next_ptr = *free_list;
+        SET_BLOCK_SIZE(next_ptr, free_block_size - size) // set new free block size
         return ret;
     }
     /**
@@ -95,7 +100,7 @@ void* allocate(int size) {
      * free_size does not need to be updated, just point free_list to
      */
     if ( size == free_block_size ) {
-        free_list = *next_ptr;
+        *free_list = *next_ptr;
         return ret;
     }
 
@@ -112,7 +117,7 @@ void* allocate(int size) {
      */
 
     //pointing at end of free chain
-    if (!*next_ptr) {
+    if (!HAS_NEXT_FREE_BLOCK) {
         /**
          * TODO: NEED TO TEST!
          */

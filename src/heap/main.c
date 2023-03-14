@@ -1,8 +1,24 @@
 #include <stdio.h>
+#include <assert.h>
 #include "alloc_fflist.c"
 #include "free_fflist.c"
 
 int main(){
+    
+    int* test1 = (int*)allocate(8175960);
+    /*
+    int i;
+    for(i=0; i<8175960/4; i++) {
+        arr1[i] = i;
+        printf("%d\n", arr1[i]);
+    }
+    */
+    assert(test1);
+    int* test2 = (int*)allocate(1);
+    assert(!test2);
+    delete(test1);
+    
+   
     int size = 16;
     int* arr = (int*)allocate(size);
     int* arr2 = (int*)allocate(size);

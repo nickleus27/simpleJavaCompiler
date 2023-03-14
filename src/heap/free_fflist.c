@@ -25,18 +25,18 @@
  * 3. blocks that point to adjacent free block
  */
 void delete(void* toDelete) {
-    if (!free_list) {
+    if (!*free_list) {
         //exit
         return;
     }
-    void** prev_ptr = free_list; //points to first free block
+    void** prev_ptr = *free_list; //points to first free block
     void** next_ptr = prev_ptr+1;
     toDelete = (char*)toDelete -8; //now points to size of block to deallocate, cast to char (1byte) and move 8 bytes to back
 
     /* check if prev_pointer points beyond toDelete. If so toDelete is in between free_list pointer and prev_pointer */
     if ( toDelete < (void*)prev_ptr ) {
         prev_ptr = toDelete; // point to block to be freed
-        free_list = prev_ptr; // update free list to point to first free block
+        *free_list = prev_ptr; // update free list to point to first free block
         prev_ptr++; //next pointer
         *prev_ptr = (char*)next_ptr-8; //cast to char (1byte) move 8 bytes back, point to next free block
         /* check for adjacent free block */
