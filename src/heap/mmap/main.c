@@ -1,11 +1,11 @@
 #include <stdio.h>
 #include <assert.h>
-#include "alloc_fflist.c"
-#include "free_fflist.c"
+#include "alloc_ff_mmap.c"
+#include "free_ff_mmap.c"
 
 int main(){
     
-    int* test1 = (int*)allocate(8175960);
+    //int* test1 = (int*)allocate(8175960);
     /*
     int i;
     for(i=0; i<8175960/4; i++) {
@@ -13,10 +13,10 @@ int main(){
         printf("%d\n", arr1[i]);
     }
     */
-    assert(test1);
-    int* test2 = (int*)allocate(1);
-    assert(!test2);
-    delete(test1);
+    //assert(test1);
+    //int* test2 = (int*)allocate(1);
+    //assert(!test2);
+    //delete(test1);
     
    
     int size = 16;
@@ -30,19 +30,18 @@ int main(){
     for (int i = 0; i < size/4; i++) {
         arr[i]=i;
     }
-    for (int i = 0; i < size/4; i++) {
-        printf("This is arr[%d] == %d\n", i, arr[i]);
-    }
-
-    //arr2 = (int*)allocate(size);
+        //arr2 = (int*)allocate(size);
     for (int i = 0; i < size/4; i++) {
         arr2[i]=i*2;
     }
-    for (int i = 0; i < size/4; i++) {
-        printf("This is arr2[%d] == %d\n", i, arr2[i]);
+        for (int i = 0; i < size/4; i++) {
+        arr3[i]=i*3;
     }
     for (int i = 0; i < size/4; i++) {
-        arr3[i]=i*3;
+        printf("This is arr[%d] == %d\n", i, arr[i]);
+    }
+    for (int i = 0; i < size/4; i++) {
+        printf("This is arr2[%d] == %d\n", i, arr2[i]);
     }
     for (int i = 0; i < size/4; i++) {
         printf("This is arr2[%d] == %d\n", i, arr3[i]);
