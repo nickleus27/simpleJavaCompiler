@@ -14,28 +14,28 @@
  */
 
 
-#define MAX_HEAP_SIZE 8159232 /* getconf PAGESIZE == 16384 (* 498 = 8159232), ulimit -s == 8176 kb */
+#define MAX_HEAP_SIZE 16384 /* getconf PAGESIZE == 16384, ulimit -s == 8176 kb */
 #define METADATA 16  /* size needed for size tag and next link */
 /**
  * @brief Each free block has these 2 values followed by a block of free memory
  *        [0, 1,...]
  *        [(0) size of block, (1) points to next free block, ...(free space)...] 
  */
-#define FIRST_FREE_BLOCK(size, first, prev, next, ret) { \
+#define FIRST_FREE_BLOCK(size, first, prev, next, ret)  \
     prev = first; \
     size = (*(int*)prev); \
     next = first; \
     next++; \
     ret = next; \
-}
-#define NEXT_FREE_BLOCK(size, prev, curr_size, next, ret) { \
+
+#define NEXT_FREE_BLOCK(size, prev, curr_size, next, ret) \
     prev = next; \
     next = *next; \
     curr_size = next; \
     next++; \
     ret = next; \
     size = (*(int*)curr_size); \
-}
+
 #define MOVE_FREE_LIST_START_PTR(next, size) free_list_start = (char*)(next) + size;
 #define HAS_NEXT_FREE_BLOCK *next_ptr
 #define SET_BLOCK_SIZE(pointer, size) (*(int*)pointer) = size;
@@ -67,9 +67,13 @@ void* allocate(int size) {
     void** tmp_first_ptr = &free_list_start;
     /* initialize heap pointer */
     if (!*tmp_first_ptr) {
+        /**
+        * TODO: Need to check for size to ask from mmap
+        * 
+        */
             __asm__ (
        "mov x0, 0           // start address\n"
-        "mov x1, 4096        // length\n"
+        "mov x1, 0x4000      // pagesize length\n"
         "mov x2, 3           // rw- PROT_READ | PROT_WRITE\n"
         "mov x3, 0x1001      // flags MAP_ANON | MAP_SHARED\n"
         "mov x4, -1          // file descriptor\n"
@@ -82,7 +86,7 @@ void* allocate(int size) {
         free_list_start = tmp_first_ptr;  // point static pointer to new alloc space
         //*free_list = free_list + 1; //add 1 == 8 bytes ->first free space
         /* 8176000 == 8176 kb */
-        (*(int*)(tmp_first_ptr)) = MAX_HEAP_SIZE - 32; //assign totals free space (-8 pointer -16 for last free block that holds size=0, next=null)        
+        (*(int*)(tmp_first_ptr)) = MAX_HEAP_SIZE -8; // assign totals free space -8 (-1) because address starts at 0
     } else {
         tmp_first_ptr = *tmp_first_ptr;
     }
@@ -96,12 +100,15 @@ void* allocate(int size) {
      * @brief (free_list pointer) points to a end of free chain
      */
     if ( !HAS_NEXT_FREE_BLOCK ) { //free_list is pointing to end/beginning of free list
-        if ( size <= free_block_size ) {
+        if ( free_block_size - size >= METADATA ) {
             MOVE_FREE_LIST_START_PTR(next_ptr, size) // move free_list beyond allocated block
             SET_BLOCK_SIZE(prev_ptr, size) // set allocated block size
             next_ptr = free_list_start;
             SET_BLOCK_SIZE(next_ptr, free_block_size - size) // set new free block size
-                    
+            next_ptr++; // move to next link pointer
+            if (HAS_NEXT_FREE_BLOCK) { // shouldnt have next pointer because at end of list set back to 0 (this block has already been alloc before)
+                *next_ptr = 0;
+            }
             return ret;
         }
         return 0;
@@ -147,16 +154,20 @@ void* allocate(int size) {
         /**
          * TODO: NEED TO TEST!
          */
-        if ( size <= free_block_size ) {
+        if ( free_block_size - size >= METADATA ) {
             SET_BLOCK_SIZE(curr_ptr, size) // set allocated block size
             UPDATE_LINKS(prev_ptr, next_ptr, size) // set prev pointer beyond allocated block to next free block
             SET_BLOCK_SIZE(next_ptr, free_block_size - size) // reduce size of next free block
+            next_ptr++; // move to next link pointer
+            if (HAS_NEXT_FREE_BLOCK) { // shouldnt have next pointer because at end of list set back to 0 (this block has already been alloc before)
+                *next_ptr = 0;
+            }
             return ret;
         }
         /**
-         * TODO: Need to test!
-         * At end of free chain and no blocks were big enough
-         */
+        * TODO: Need to check for size to ask from mmap
+        * 
+        */
         return 0; //return NULL if at the end free chain and no blocks where big enough
     }
 

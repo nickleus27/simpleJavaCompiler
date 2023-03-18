@@ -4,19 +4,19 @@
 #include "free_ff_mmap.c"
 
 int main(){
-    
-    //int* test1 = (int*)allocate(8175960);
-    /*
+    int max = 16384 -8 -8 -16; // -8 for size tag, -8 for -1 because address starts at 0, -16 for last size and next pointer
+    int* test1 = (int*)allocate(max);
+    assert(test1);
+
     int i;
-    for(i=0; i<8175960/4; i++) {
-        arr1[i] = i;
-        printf("%d\n", arr1[i]);
+    for(i=0; i<max/4; i++) {
+        test1[i] = i;
+        printf("%d\n", test1[i]);
     }
-    */
-    //assert(test1);
-    //int* test2 = (int*)allocate(1);
-    //assert(!test2);
-    //delete(test1);
+    
+    int* test2 = (int*)allocate(1);
+    assert(!test2);
+    delete(test1);
     
    
     int size = 16;
