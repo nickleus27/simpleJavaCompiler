@@ -11,4 +11,4 @@ main:
 	$(CC) main.c
 
 clean: 
-	rm main main.s
+	rm -f main main.s a.out

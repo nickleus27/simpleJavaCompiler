@@ -52,7 +52,7 @@ int main(){
     if(!arr3){
         printf("null, did not allocate\n");
     }
-    arr = (int*)allocate(size);
+    arr = (int*)allocate(8);
     int* arr6 = (int*)allocate(size);
     
 }
