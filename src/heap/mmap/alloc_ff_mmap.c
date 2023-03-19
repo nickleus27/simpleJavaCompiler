@@ -14,8 +14,10 @@
  */
 
 
-#define MAX_HEAP_SIZE 16384 /* getconf PAGESIZE == 16384, ulimit -s == 8176 kb */
+#define MAX_HEAP_SIZE 8176000 /* ulimit -s == 8176 kb */
+#define PAGESIZE 16384 /* getconf PAGESIZE == 16384 */
 #define METADATA 16  /* size needed for size tag and next link */
+#define SIZETAG 8   /* each allocated block needs to store the size of the block */
 /**
  * @brief Each free block has these 2 values followed by a block of free memory
  *        [0, 1,...]
@@ -60,33 +62,35 @@ void* allocate(int size) {
     #endif
     //+8 to store size tag, and +8 for storing next tag will be applied by the size % 8
     // for example size == 1, 1+8 ==9, while(size % 8) size++ == 16
-    size += 8; //+8 for store size tag
-    while (size % 8) { //8 byte aligned
+    size += SIZETAG; // +8 for store size tag
+    while (size % 8) { // 8 byte aligned
         size++;
     }
     void** tmp_first_ptr = &free_list_start;
     /* initialize heap pointer */
     if (!*tmp_first_ptr) {
-        /**
-        * TODO: Need to check for size to ask from mmap
-        * 
-        */
-            __asm__ (
-       "mov x0, 0           // start address\n"
-        "mov x1, 0x4000      // pagesize length\n"
-        "mov x2, 3           // rw- PROT_READ | PROT_WRITE\n"
-        "mov x3, 0x1001      // flags MAP_ANON | MAP_SHARED\n"
-        "mov x4, -1          // file descriptor\n"
-        "mov x5, 0           // offset\n"
-        "mov x16, 197        // mmap\n"
-        "svc #0x80\n"
-        "mov x8, x0\n"
-        "str x8, [sp, #56]"
-    );
+        unsigned long mmapSize = size + METADATA;
+        mmapSize = ((mmapSize/PAGESIZE) * PAGESIZE) + PAGESIZE;
+        
+        __asm__ (
+            "mov x0, 0           // start address\n"
+            "mov x1, x8          // pagesize length\n" // x8 holds mmapSize
+            "mov x2, 3           // rw- PROT_READ | PROT_WRITE\n"
+            "mov x3, 0x1001      // flags MAP_ANON | MAP_SHARED\n"
+            "mov x4, -1          // file descriptor\n"
+            "mov x5, 0           // offset\n"
+            "mov x16, 197        // mmap\n"
+            "svc #0x80\n"
+            "mov x8, x0\n"       // save returned pointer to tmp_first_ptr
+            "str x8, [sp, #56]"
+        );
+        if (!tmp_first_ptr) {
+            return 0;
+        }
         free_list_start = tmp_first_ptr;  // point static pointer to new alloc space
         //*free_list = free_list + 1; //add 1 == 8 bytes ->first free space
         /* 8176000 == 8176 kb */
-        (*(int*)(tmp_first_ptr)) = MAX_HEAP_SIZE -8; // assign totals free space -8 (-1) because address starts at 0
+        (*(int*)(tmp_first_ptr)) = mmapSize - SIZETAG; // assign total free space
     } else {
         tmp_first_ptr = *tmp_first_ptr;
     }

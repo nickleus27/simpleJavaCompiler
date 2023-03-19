@@ -4,7 +4,7 @@
 #include "free_ff_mmap.c"
 
 int main(){
-    int max = 16384 -8 -8 -16; // -8 for size tag, -8 for -1 because address starts at 0, -16 for last size and next pointer
+    int max = 20000; //16384 -8 -8 -16; // -8 for size tag, -8 for -1 because address starts at 0, -16 for last size and next pointer
     int* test1 = (int*)allocate(max);
     assert(test1);
 
@@ -14,7 +14,7 @@ int main(){
         printf("%d\n", test1[i]);
     }
     
-    int* test2 = (int*)allocate(1);
+    int* test2 = (int*)allocate(16384);
     assert(!test2);
     delete(test1);
     
