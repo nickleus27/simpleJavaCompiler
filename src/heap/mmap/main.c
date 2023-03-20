@@ -15,7 +15,7 @@ int main(){
     }
     
     int* test2 = (int*)allocate(16384);
-    assert(!test2);
+    assert(test2);
     delete(test1);
     
    
@@ -54,5 +54,6 @@ int main(){
     }
     arr = (int*)allocate(8);
     int* arr6 = (int*)allocate(size);
-    
+    int* arr7 = (int*)allocate(size);
+    return 0;
 }

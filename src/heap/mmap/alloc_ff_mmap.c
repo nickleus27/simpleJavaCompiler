@@ -57,7 +57,7 @@ void* allocate(int size) {
     // for sjava language. run make assembly
     #if !defined(DEBUG)
     __asm__ ( /* inline assembly statement. need to recheck stack offset */
-        "\tldr\tw0, [sp, #96] //save size arg into this frames memory"
+        "\tldr\tw0, [sp, #128] //save size arg into this frames memory"
     );
     #endif
     //+8 to store size tag, and +8 for storing next tag will be applied by the size % 8
@@ -82,7 +82,7 @@ void* allocate(int size) {
             "mov x16, 197        // mmap\n"
             "svc #0x80\n"
             "mov x8, x0\n"       // save returned pointer to tmp_first_ptr
-            "str x8, [sp, #56]"
+            "str x8, [sp, #88]"
         );
         if (!tmp_first_ptr) {
             return 0;
@@ -115,7 +115,45 @@ void* allocate(int size) {
             }
             return ret;
         }
-        return 0;
+        unsigned long mmapSize = size + METADATA;
+        mmapSize = ((mmapSize/PAGESIZE) * PAGESIZE) + PAGESIZE;
+        
+        __asm__ (
+            "mov x0, 0           // start address\n"
+            "mov x1, x8          // pagesize length\n" // x8 holds mmapSize
+            "mov x2, 3           // rw- PROT_READ | PROT_WRITE\n"
+            "mov x3, 0x1001      // flags MAP_ANON | MAP_SHARED\n"
+            "mov x4, -1          // file descriptor\n"
+            "mov x5, 0           // offset\n"
+            "mov x16, 197        // mmap\n"
+            "svc #0x80\n"
+            "mov x8, x0\n"       // save returned pointer to tmp_first_ptr
+            "str x8, [sp, #88]"
+        );
+        if (!tmp_first_ptr) {
+            return 0;
+        }
+        /**
+         * TODO:  Need to test for coniguous address
+         * 
+         */
+        // if returned mmap address is contiguous
+        if ((char*)prev_ptr + free_block_size == (char*)tmp_first_ptr) {
+            tmp_first_ptr = free_list_start;
+            SET_BLOCK_SIZE(tmp_first_ptr, free_block_size + mmapSize) // assign total free space
+            MOVE_FREE_LIST_START_PTR(next_ptr, size) // move free_list beyond allocated block
+            SET_BLOCK_SIZE(prev_ptr, size) // set allocated block size
+            next_ptr = free_list_start;
+            SET_BLOCK_SIZE(next_ptr, free_block_size - size) // set new free block size
+            next_ptr++; // move to next link pointer
+            if (HAS_NEXT_FREE_BLOCK) { // shouldnt have next pointer because at end of list set back to 0 (this block has already been alloc before)
+                *next_ptr = 0;
+            }
+            return ret;
+        } else { // else separate address spaces, link together
+            *next_ptr = tmp_first_ptr;
+            SET_BLOCK_SIZE(tmp_first_ptr, mmapSize - SIZETAG) // set allocated block size
+        }
     }
     /**
      * TODO: NEED TO TEST!
@@ -138,6 +176,8 @@ void* allocate(int size) {
         SET_BLOCK_SIZE(prev_ptr, size) // set allocated block size
         next_ptr = free_list_start;
         SET_BLOCK_SIZE(next_ptr, free_block_size - size) // set new free block size
+        next_ptr++;
+        *next_ptr = *ret; // set new next link
         return ret;
     }
 
@@ -172,6 +212,7 @@ void* allocate(int size) {
         * TODO: Need to check for size to ask from mmap
         * 
         */
+        unsigned long mmapSize = size + METADATA;
         return 0; //return NULL if at the end free chain and no blocks where big enough
     }
 
@@ -197,6 +238,10 @@ void* allocate(int size) {
         SET_BLOCK_SIZE(next_ptr, free_block_size - size) // reduce size of next free block
         return ret;
     }
-
+    /**
+     * TODO: need te re mmap again here.
+     * 
+     */
+    unsigned long mmapSize = size + METADATA;
     return 0;
 }
