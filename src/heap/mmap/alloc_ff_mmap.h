@@ -11,5 +11,7 @@
  * 
  */
 
+typedef struct _node_t node_t;
+
 void* allocate(int size);
 extern void* free_list_start;

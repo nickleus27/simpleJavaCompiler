@@ -23,25 +23,21 @@
  *        [0, 1,...]
  *        [(0) size of block, (1) points to next free block, ...(free space)...] 
  */
-#define FIRST_FREE_BLOCK(size, first, prev, next, ret)  \
+#define FIRST_FREE_BLOCK(freesize, first, prev, nextlink, ret)  \
     prev = first; \
-    size = (*(int*)prev); \
-    next = first; \
-    next++; \
-    ret = next; \
+    nextlink = first->next; \
+    ret = (header_t*)first; \
+    freesize = prev->size;
 
-#define NEXT_FREE_BLOCK(size, prev, curr_size, next, ret) \
-    prev = next; \
-    next = *next; \
-    curr_size = next; \
-    next++; \
-    ret = next; \
-    size = (*(int*)curr_size); \
+typedef struct _header_t {
+    unsigned long size;
+    void* ret_ptr;
+}header_t;
 
-#define MOVE_FREE_LIST_START_PTR(next, size) free_list_start = (char*)(next) + size;
-#define HAS_NEXT_FREE_BLOCK *next_ptr
-#define SET_BLOCK_SIZE(pointer, size) (*(int*)pointer) = size;
-#define UPDATE_LINKS(prev, next, size) *prev = (char*)(next) + size; next = *prev;
+typedef struct _node_t {
+    unsigned long size;
+    struct _node_t* next;
+}node_t;
 
 /**
  * @brief https://stackoverflow.com/questions/2529185/what-are-cfi-directives-in-gnu-assembler-gas-used-for
@@ -57,7 +53,7 @@ void* allocate(int size) {
     // for sjava language. run make assembly
     #if !defined(DEBUG)
     __asm__ ( /* inline assembly statement. need to recheck stack offset */
-        "\tldr\tw0, [sp, #128] //save size arg into this frames memory"
+        "\tldr\tw0, [sp, #112] //save size arg into this frames memory"
     );
     #endif
     //+8 to store size tag, and +8 for storing next tag will be applied by the size % 8
@@ -66,9 +62,9 @@ void* allocate(int size) {
     while (size % 8) { // 8 byte aligned
         size++;
     }
-    void** tmp_first_ptr = &free_list_start;
+    node_t* tmp_first_ptr = free_list_start;
     /* initialize heap pointer */
-    if (!*tmp_first_ptr) {
+    if (!tmp_first_ptr) {
         unsigned long mmapSize = size + METADATA;
         mmapSize = ((mmapSize/PAGESIZE) * PAGESIZE) + PAGESIZE;
         
@@ -82,7 +78,7 @@ void* allocate(int size) {
             "mov x16, 197        // mmap\n"
             "svc #0x80\n"
             "mov x8, x0\n"       // save returned pointer to tmp_first_ptr
-            "str x8, [sp, #88]"
+            "str x8, [sp, #72]"
         );
         if (!tmp_first_ptr) {
             return 0;
@@ -90,30 +86,27 @@ void* allocate(int size) {
         free_list_start = tmp_first_ptr;  // point static pointer to new alloc space
         //*free_list = free_list + 1; //add 1 == 8 bytes ->first free space
         /* 8176000 == 8176 kb */
-        (*(int*)(tmp_first_ptr)) = mmapSize - SIZETAG; // assign total free space
-    } else {
-        tmp_first_ptr = *tmp_first_ptr;
+        tmp_first_ptr->size = mmapSize - SIZETAG; // assign total free space
     }
     int free_block_size;
-    void** prev_ptr;
-    void** next_ptr;
-    void** ret;
+    node_t* prev_ptr;
+    node_t* next_ptr;
+    header_t* ret;
     FIRST_FREE_BLOCK(free_block_size, tmp_first_ptr, prev_ptr, next_ptr, ret)
 
     /**
      * @brief (free_list pointer) points to a end of free chain
      */
-    if ( !HAS_NEXT_FREE_BLOCK ) { //free_list is pointing to end/beginning of free list
+    if ( !tmp_first_ptr->next ) { //free_list is pointing to end/beginning of free list
         if ( free_block_size - size >= METADATA ) {
-            MOVE_FREE_LIST_START_PTR(next_ptr, size) // move free_list beyond allocated block
-            SET_BLOCK_SIZE(prev_ptr, size) // set allocated block size
-            next_ptr = free_list_start;
-            SET_BLOCK_SIZE(next_ptr, free_block_size - size) // set new free block size
-            next_ptr++; // move to next link pointer
-            if (HAS_NEXT_FREE_BLOCK) { // shouldnt have next pointer because at end of list set back to 0 (this block has already been alloc before)
-                *next_ptr = 0;
+            free_list_start = (char*)(&tmp_first_ptr->next) + size; // move free_list beyond allocated block
+            ret->size = size;
+            tmp_first_ptr = free_list_start;
+            tmp_first_ptr->size = free_block_size - size;
+            if (tmp_first_ptr->next) { // shouldnt have next pointer because at end of list set back to 0 (this block has already been alloc before)
+                tmp_first_ptr->next = 0;
             }
-            return ret;
+            return &ret->ret_ptr;
         }
         unsigned long mmapSize = size + METADATA;
         mmapSize = ((mmapSize/PAGESIZE) * PAGESIZE) + PAGESIZE;
@@ -128,7 +121,7 @@ void* allocate(int size) {
             "mov x16, 197        // mmap\n"
             "svc #0x80\n"
             "mov x8, x0\n"       // save returned pointer to tmp_first_ptr
-            "str x8, [sp, #88]"
+            "str x8, [sp, #72]"
         );
         if (!tmp_first_ptr) {
             return 0;
@@ -138,21 +131,21 @@ void* allocate(int size) {
          * 
          */
         // if returned mmap address is contiguous
-        if ((char*)prev_ptr + free_block_size == (char*)tmp_first_ptr) {
+        if ((char*)(&prev_ptr->next) + free_block_size - SIZETAG == (char*)tmp_first_ptr) {
             tmp_first_ptr = free_list_start;
-            SET_BLOCK_SIZE(tmp_first_ptr, free_block_size + mmapSize) // assign total free space
-            MOVE_FREE_LIST_START_PTR(next_ptr, size) // move free_list beyond allocated block
-            SET_BLOCK_SIZE(prev_ptr, size) // set allocated block size
-            next_ptr = free_list_start;
-            SET_BLOCK_SIZE(next_ptr, free_block_size - size) // set new free block size
-            next_ptr++; // move to next link pointer
-            if (HAS_NEXT_FREE_BLOCK) { // shouldnt have next pointer because at end of list set back to 0 (this block has already been alloc before)
-                *next_ptr = 0;
+            free_block_size = free_block_size + mmapSize;
+            free_list_start = (char*)(&tmp_first_ptr->next) + size;
+            ret->size = size;
+            tmp_first_ptr = free_list_start;
+            tmp_first_ptr->size = free_block_size - size;
+            if (tmp_first_ptr->next) { // shouldnt have next pointer because at end of list set back to 0 (this block has already been alloc before)
+                tmp_first_ptr->next = 0;
             }
-            return ret;
+            return &ret->ret_ptr;
         } else { // else separate address spaces, link together
-            *next_ptr = tmp_first_ptr;
-            SET_BLOCK_SIZE(tmp_first_ptr, mmapSize - SIZETAG) // set allocated block size
+            prev_ptr->next = tmp_first_ptr;
+            next_ptr = prev_ptr->next;
+            tmp_first_ptr->size = mmapSize - SIZETAG;
         }
     }
     /**
@@ -162,8 +155,8 @@ void* allocate(int size) {
      * free_size does not need to be updated, just point free_list to
      */
     if ( size == free_block_size ) {
-        free_list_start = *next_ptr;
-        return ret;
+        free_list_start = tmp_first_ptr->next;
+        return &ret->ret_ptr;
     }
 
         /**
@@ -172,20 +165,22 @@ void* allocate(int size) {
      * (free_list pointer) points to a big enough chunk of memory
      */
     if ( free_block_size - size >= METADATA ) { // need to make sure enough free space for size and next of new smaller free block
-        MOVE_FREE_LIST_START_PTR(next_ptr, size) // move free_list beyond allocated block
-        SET_BLOCK_SIZE(prev_ptr, size) // set allocated block size
-        next_ptr = free_list_start;
-        SET_BLOCK_SIZE(next_ptr, free_block_size - size) // set new free block size
-        next_ptr++;
-        *next_ptr = *ret; // set new next link
-        return ret;
+        free_list_start = (char*)(&tmp_first_ptr->next) + size;
+        ret->size = size;
+        tmp_first_ptr = (node_t*)free_list_start;
+        tmp_first_ptr->size = free_block_size - size;
+        tmp_first_ptr->next = prev_ptr->next;
+        return &ret->ret_ptr;
     }
 
     // search free list for big enough free space for allocation 
-    void** curr_ptr;
-    NEXT_FREE_BLOCK(free_block_size, prev_ptr, curr_ptr, next_ptr, ret)
-    while ( *next_ptr && free_block_size < size ) {
-        NEXT_FREE_BLOCK(free_block_size, prev_ptr, curr_ptr, next_ptr, ret)
+    free_block_size = next_ptr->size;
+    ret = (header_t*)next_ptr;
+    while ( next_ptr->next && free_block_size < size ) {
+        prev_ptr= next_ptr;
+        next_ptr = next_ptr->next;
+        ret = (header_t*)next_ptr;
+        free_block_size = next_ptr->size;
     }
 
     /**
@@ -194,19 +189,19 @@ void* allocate(int size) {
      */
 
     //pointing at end of free chain
-    if (!HAS_NEXT_FREE_BLOCK) {
+    if (!next_ptr->next) {
         /**
          * TODO: NEED TO TEST!
          */
         if ( free_block_size - size >= METADATA ) {
-            SET_BLOCK_SIZE(curr_ptr, size) // set allocated block size
-            UPDATE_LINKS(prev_ptr, next_ptr, size) // set prev pointer beyond allocated block to next free block
-            SET_BLOCK_SIZE(next_ptr, free_block_size - size) // reduce size of next free block
-            next_ptr++; // move to next link pointer
-            if (HAS_NEXT_FREE_BLOCK) { // shouldnt have next pointer because at end of list set back to 0 (this block has already been alloc before)
-                *next_ptr = 0;
+            ret->size = size;
+            prev_ptr->next = (node_t*)((char*)&next_ptr->next + size);
+            next_ptr = prev_ptr->next;
+            next_ptr->size = free_block_size - size;
+            if (next_ptr->next) { // shouldnt have next pointer because at end of list set back to 0 (this block has already been alloc before)
+                next_ptr = 0;
             }
-            return ret;
+            return &ret->ret_ptr;
         }
         /**
         * TODO: Need to check for size to ask from mmap
@@ -223,8 +218,8 @@ void* allocate(int size) {
      * free_size does not need to be updated, just point free_list to
      */
     if ( size == free_block_size ) {
-        *prev_ptr = *next_ptr;
-        return ret;
+        prev_ptr->next = next_ptr->next;
+        return &ret->ret_ptr;
     }
 
         /**
@@ -233,10 +228,12 @@ void* allocate(int size) {
      * prev_pointer points to a big enough chunk of memory
      */
     if ( free_block_size - size >= METADATA ) { // need to make sure enough free space for size and next of new smaller free block
-        SET_BLOCK_SIZE(curr_ptr, size) // set allocated block size
-        UPDATE_LINKS(prev_ptr, next_ptr, size) // set prev point beyond allocated block to next free block
-        SET_BLOCK_SIZE(next_ptr, free_block_size - size) // reduce size of next free block
-        return ret;
+        ret->size = size;
+        prev_ptr->next = (node_t*)((char*)&next_ptr->next + size);
+        next_ptr = prev_ptr->next;
+        next_ptr->size = free_block_size - size;
+        next_ptr->next = (node_t*)ret->ret_ptr;
+        return &ret->ret_ptr;
     }
     /**
      * TODO: need te re mmap again here.

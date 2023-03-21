@@ -48,7 +48,7 @@ int main(){
     }
     delete(arr);
     delete(arr3);
-    arr3 = (int*)allocate(24);
+    arr3 = (int*)allocate(32);
     if(!arr3){
         printf("null, did not allocate\n");
     }
