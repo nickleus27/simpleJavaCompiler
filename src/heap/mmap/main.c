@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <assert.h>
-#include "alloc_ff_mmap.c"
-#include "free_ff_mmap.c"
+#include "free_list.h"
 
 int main(){
     int max = 20000; //16384 -8 -8 -16; // -8 for size tag, -8 for -1 because address starts at 0, -16 for last size and next pointer

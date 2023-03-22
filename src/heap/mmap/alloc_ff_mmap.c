@@ -12,7 +12,7 @@
  * 
  * THIS IS STILL A WORK IN PROGRESS
  */
-
+#include "free_list.h"
 
 #define MAX_HEAP_SIZE 8176000 /* ulimit -s == 8176 kb */
 #define PAGESIZE 16384 /* getconf PAGESIZE == 16384 */
@@ -28,16 +28,6 @@
     nextlink = first->next; \
     ret = (header_t*)first; \
     freesize = prev->size;
-
-typedef struct _header_t {
-    unsigned long size;
-    void* ret_ptr;
-}header_t;
-
-typedef struct _node_t {
-    unsigned long size;
-    struct _node_t* next;
-}node_t;
 
 /**
  * @brief https://stackoverflow.com/questions/2529185/what-are-cfi-directives-in-gnu-assembler-gas-used-for

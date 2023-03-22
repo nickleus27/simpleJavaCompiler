@@ -14,7 +14,7 @@
  * https://stackoverflow.com/questions/2855121/what-is-the-purpose-of-using-pedantic-in-the-gcc-g-compiler
  */
 
-#include "alloc_ff_mmap.h"
+#include "free_list.h"
 /**
  * 1. free blocks at the end of chain
  *      free list points to end of chain

@@ -11,4 +11,4 @@ main:
 	$(CC) main.c
 
 clean: 
-	rm -f main main.s a.out
+	rm -rf main main.s a.out *.dSYM
