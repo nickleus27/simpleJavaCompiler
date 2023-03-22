@@ -14,10 +14,6 @@
  */
 #include "free_list.h"
 
-#define MAX_HEAP_SIZE 8176000 /* ulimit -s == 8176 kb */
-#define PAGESIZE 16384 /* getconf PAGESIZE == 16384 */
-#define METADATA 16  /* size needed for size tag and next link */
-#define SIZETAG 8   /* each allocated block needs to store the size of the block */
 /**
  * @brief Each free block has these 2 values followed by a block of free memory
  *        [0, 1,...]
@@ -117,7 +113,7 @@ void* allocate(int size) {
             return 0;
         }
         /**
-         * TODO:  Need to test for coniguous address
+         * TODO:  Need to check if address returned is below current free_list_start
          * 
          */
         // if returned mmap address is contiguous

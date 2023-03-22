@@ -11,6 +11,11 @@
 #ifndef FF_FREE_LIST_H
 #define FF_FREE_LIST_H
 
+#define MAX_HEAP_SIZE 8176000 /* ulimit -s == 8176 kb */
+#define PAGESIZE 16384 /* getconf PAGESIZE == 16384 */
+#define METADATA 16  /* size needed for size tag and next link */
+#define SIZETAG 8   /* each allocated block needs to store the size of the block */
+
 typedef struct _header_t {
     unsigned long size;
     void* ret_ptr;
