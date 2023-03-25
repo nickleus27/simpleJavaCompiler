@@ -15,21 +15,9 @@
 #include "free_list.h"
 
 /**
- * @brief Each free block has these 2 values followed by a block of free memory
- *        [0, 1,...]
- *        [(0) size of block, (1) points to next free block, ...(free space)...] 
- */
-#define FIRST_FREE_BLOCK(freesize, first, prev, nextlink, ret)  \
-    prev = first; \
-    nextlink = first->next; \
-    ret = (header_t*)first; \
-    freesize = prev->size;
-
-/**
  * @brief https://stackoverflow.com/questions/2529185/what-are-cfi-directives-in-gnu-assembler-gas-used-for
  *  use this for compiling assembly without call frame information unwinding directives
  * 
- * TODO: Also get rid of library includes up top, and the exit call...hand write in the exit to assembly
  */
 
 void * free_list_start = 0;
@@ -42,7 +30,7 @@ void* allocate(int size) {
         "\tldr\tw0, [sp, #112] //save size arg into this frames memory"
     );
     #endif
-    //+8 to store size tag, and +8 for storing next tag will be applied by the size % 8
+    //+8 to store size tag
     // for example size == 1, 1+8 ==9, while(size % 8) size++ == 16
     size += SIZETAG; // +8 for store size tag
     while (size % 8) { // 8 byte aligned
@@ -70,19 +58,15 @@ void* allocate(int size) {
             return 0;
         }
         free_list_start = tmp_first_ptr;  // point static pointer to new alloc space
-        //*free_list = free_list + 1; //add 1 == 8 bytes ->first free space
-        /* 8176000 == 8176 kb */
         tmp_first_ptr->size = mmapSize - SIZETAG; // assign total free space
     }
-    int free_block_size;
-    node_t* prev_ptr;
-    node_t* next_ptr;
-    header_t* ret;
-    FIRST_FREE_BLOCK(free_block_size, tmp_first_ptr, prev_ptr, next_ptr, ret)
 
-    /**
-     * @brief (free_list pointer) points to a end of free chain
-     */
+    node_t* prev_ptr = tmp_first_ptr;
+    node_t* next_ptr = tmp_first_ptr->next;
+    header_t* ret = (header_t*)tmp_first_ptr;
+    int free_block_size = prev_ptr->size;
+
+     // if (free_list pointer) points to a end of free chain
     if ( !tmp_first_ptr->next ) { //free_list is pointing to end/beginning of free list
         if ( free_block_size - size >= METADATA ) {
             free_list_start = (char*)(&tmp_first_ptr->next) + size; // move free_list beyond allocated block
