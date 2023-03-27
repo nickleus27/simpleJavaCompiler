@@ -46,6 +46,7 @@ int main(){
         printf("This is arr2[%d] == %d\n", i, arr3[i]);
     }
     delete(arr);
+    //delete(arr2);
     delete(arr3);
     //delete(arr2);
     arr3 = (int*)allocate(32);

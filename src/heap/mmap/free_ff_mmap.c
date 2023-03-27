@@ -36,7 +36,7 @@ void delete(void* del_ptr) {
         free_list_start = prev_ptr;
         prev_ptr->next = next_ptr;
         /* check for adjacent free block */
-        if ((void*)next_ptr == (void*)(((char*)(&prev_ptr->next)) + toDelete->size)) {
+        if ((void*)next_ptr == (void*)(((char*)(prev_ptr)) + toDelete->size)) {
             int size1 = prev_ptr->size;
             int size2 = next_ptr->size;
 
@@ -56,19 +56,19 @@ void delete(void* del_ptr) {
     int toDelete_size_block = toDelete->size;
     int next_size_block = next_ptr->size;
     /*check to see if prev_ptr free block is adjacent to toDelete block and toDelete block is adjacent to next_ptr free block*/
-    if ((void*)((char*)(&prev_ptr->next) + prev_size_block) == (void*)toDelete && (void*)((char*)(&toDelete->ret_ptr) + toDelete_size_block) == (void*)next_ptr)
+    if ((void*)((char*)(prev_ptr) + prev_size_block) == (void*)toDelete && (void*)((char*)(toDelete) + toDelete_size_block) == (void*)next_ptr)
     {
         prev_ptr->size = prev_size_block + toDelete_size_block + next_size_block;
         prev_ptr->next = next_ptr->next;
         return;
     }
     /*check to see if prev_ptr free block is adjacent to toDelete block */
-    if ( (void*)((char*)(&prev_ptr->next) + prev_size_block) == (void*)toDelete ) {
+    if ( (void*)((char*)(prev_ptr) + prev_size_block) == (void*)toDelete ) {
         prev_ptr->size = prev_size_block + toDelete_size_block;
         return;
     } 
     /*check to see if toDelete block is adjacent to next_ptr free block*/
-    if ( (void*)((char*)(&toDelete->ret_ptr) + toDelete_size_block) == (void*)next_ptr ) {
+    if ( (void*)((char*)(toDelete) + toDelete_size_block) == (void*)next_ptr ) {
         prev_ptr->next = (node_t*)toDelete;
         prev_ptr = (node_t*)toDelete;
         prev_ptr->size = toDelete_size_block + next_size_block;

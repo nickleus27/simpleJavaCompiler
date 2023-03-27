@@ -58,7 +58,7 @@ void* allocate(int size) {
             return 0;
         }
         free_list_start = tmp_first_ptr;  // point static pointer to new alloc space
-        tmp_first_ptr->size = mmapSize - SIZETAG; // assign total free space
+        tmp_first_ptr->size = mmapSize; // assign total free space
     }
 
     node_t* prev_ptr = tmp_first_ptr;
@@ -69,7 +69,7 @@ void* allocate(int size) {
      // if (free_list pointer) points to a end of free chain
     if ( !tmp_first_ptr->next ) { //free_list is pointing to end/beginning of free list
         if ( free_block_size - size >= METADATA ) {
-            free_list_start = (char*)(&tmp_first_ptr->next) + size; // move free_list beyond allocated block
+            free_list_start = (char*)(tmp_first_ptr) + size; // move free_list beyond allocated block
             ret->size = size;
             tmp_first_ptr = free_list_start;
             tmp_first_ptr->size = free_block_size - size;
@@ -101,10 +101,10 @@ void* allocate(int size) {
          * 
          */
         // if returned mmap address is contiguous
-        if ((char*)(&prev_ptr->next) + free_block_size - SIZETAG == (char*)tmp_first_ptr) {
+        if ((char*)(prev_ptr) + free_block_size == (char*)tmp_first_ptr) {
             tmp_first_ptr = free_list_start;
             free_block_size = free_block_size + mmapSize;
-            free_list_start = (char*)(&tmp_first_ptr->next) + size;
+            free_list_start = (char*)(tmp_first_ptr) + size;
             ret->size = size;
             tmp_first_ptr = free_list_start;
             tmp_first_ptr->size = free_block_size - size;
@@ -115,7 +115,7 @@ void* allocate(int size) {
         } else { // else separate address spaces, link together
             prev_ptr->next = tmp_first_ptr;
             next_ptr = prev_ptr->next;
-            tmp_first_ptr->size = mmapSize - SIZETAG;
+            tmp_first_ptr->size = mmapSize;
         }
     }
     /**
@@ -135,7 +135,7 @@ void* allocate(int size) {
      * (free_list pointer) points to a big enough chunk of memory
      */
     if ( free_block_size - size >= METADATA ) { // need to make sure enough free space for size and next of new smaller free block
-        free_list_start = (char*)(&tmp_first_ptr->next) + size;
+        free_list_start = (char*)(tmp_first_ptr) + size;
         ret->size = size;
         tmp_first_ptr = (node_t*)free_list_start;
         tmp_first_ptr->size = free_block_size - size;
@@ -165,7 +165,7 @@ void* allocate(int size) {
          */
         if ( free_block_size - size >= METADATA ) {
             ret->size = size;
-            prev_ptr->next = (node_t*)((char*)&next_ptr->next + size);
+            prev_ptr->next = (node_t*)((char*)(next_ptr) + size);
             next_ptr = prev_ptr->next;
             next_ptr->size = free_block_size - size;
             if (next_ptr->next) { // shouldnt have next pointer because at end of list set back to 0 (this block has already been alloc before)
@@ -199,7 +199,7 @@ void* allocate(int size) {
      */
     if ( free_block_size - size >= METADATA ) { // need to make sure enough free space for size and next of new smaller free block
         ret->size = size;
-        prev_ptr->next = (node_t*)((char*)&next_ptr->next + size);
+        prev_ptr->next = (node_t*)((char*)(next_ptr) + size);
         next_ptr = prev_ptr->next;
         next_ptr->size = free_block_size - size;
         next_ptr->next = (node_t*)ret->ret_ptr;
