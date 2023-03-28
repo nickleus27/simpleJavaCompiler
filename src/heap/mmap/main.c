@@ -31,10 +31,10 @@ int main(){
     }
         //arr2 = (int*)allocate(size);
     for (int i = 0; i < size/4; i++) {
-        arr2[i]=i*2;
+        arr2[i]=i*2+1;
     }
         for (int i = 0; i < size/4; i++) {
-        arr3[i]=i*3;
+        arr3[i]=i*3+1;
     }
     for (int i = 0; i < size/4; i++) {
         printf("This is arr[%d] == %d\n", i, arr[i]);
