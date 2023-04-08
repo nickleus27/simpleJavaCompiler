@@ -2,7 +2,7 @@
 #include <assert.h>
 #include "free_list.h"
 
-int main(){
+int main(void){
     int max = 20000; //16384 -8 -8 -16; // -8 for size tag, -8 for -1 because address starts at 0, -16 for last size and next pointer
     int* test1 = (int*)allocate(max);
     assert(test1);
@@ -16,7 +16,7 @@ int main(){
     int* test2 = (int*)allocate(16384);
     assert(test2);
     delete(test1);
-    
+
    
     int size = 16;
     int* arr = (int*)allocate(size);
@@ -56,5 +56,18 @@ int main(){
     arr = (int*)allocate(8);
     int* arr6 = (int*)allocate(size);
     int* arr7 = (int*)allocate(size);
+
+    // use this to test free / alloc having to move further down chain
+    // add some more frees to make different size holes towards the end
+    int* arrTest[24];
+    for (int i = 0; i < 24; i++)
+    {
+        arrTest[i] = allocate(4);
+    }
+    for (int i = 0; i < 24; i++)
+    {
+        if (i%2) delete(arrTest[i]);
+    }
+    delete(arrTest[22]);
     return 0;
 }

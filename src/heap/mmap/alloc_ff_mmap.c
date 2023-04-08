@@ -32,7 +32,7 @@ void* allocate(int size) {
     #endif
     //+8 to store size tag
     // for example size == 1, 1+8 ==9, while(size % 8) size++ == 16
-    size += SIZETAG; // +8 for store size tag
+    size += METADATA; // +16 for magic_number + size
     while (size % 8) { // 8 byte aligned
         size++;
     }
@@ -52,8 +52,12 @@ void* allocate(int size) {
             "mov x16, 197        // mmap\n"
             "svc #0x80\n"
             "mov x8, x0\n"       // save returned pointer to tmp_first_ptr
-            "str x8, [sp, #72]"
+            "str x8, [sp, #88]"
         );
+        /**
+         * TODO: Need to check for error codes
+         * 
+         */
         if (!tmp_first_ptr) {
             return 0;
         }
@@ -70,12 +74,13 @@ void* allocate(int size) {
     if ( !tmp_first_ptr->next ) { //free_list is pointing to end/beginning of free list
         if ( free_block_size - size >= METADATA ) {
             free_list_start = (char*)(tmp_first_ptr) + size; // move free_list beyond allocated block
-            ret->size = size;
             tmp_first_ptr = free_list_start;
             tmp_first_ptr->size = free_block_size - size;
             if (tmp_first_ptr->next) { // shouldnt have next pointer because at end of list set back to 0 (this block has already been alloc before)
                 tmp_first_ptr->next = 0;
             }
+            ret->size = size;
+            ret->magic_number = MAGIC_NUMBER;
             return &ret->ret_ptr;
         }
         unsigned long mmapSize = size + METADATA;
@@ -91,7 +96,7 @@ void* allocate(int size) {
             "mov x16, 197        // mmap\n"
             "svc #0x80\n"
             "mov x8, x0\n"       // save returned pointer to tmp_first_ptr
-            "str x8, [sp, #72]"
+            "str x8, [sp, #88]"
         );
         if (!tmp_first_ptr) {
             return 0;
@@ -105,12 +110,13 @@ void* allocate(int size) {
             tmp_first_ptr = free_list_start;
             free_block_size = free_block_size + mmapSize;
             free_list_start = (char*)(tmp_first_ptr) + size;
-            ret->size = size;
             tmp_first_ptr = free_list_start;
             tmp_first_ptr->size = free_block_size - size;
             if (tmp_first_ptr->next) { // shouldnt have next pointer because at end of list set back to 0 (this block has already been alloc before)
                 tmp_first_ptr->next = 0;
             }
+            ret->size = size;
+            ret->magic_number = MAGIC_NUMBER;
             return &ret->ret_ptr;
         } else { // else separate address spaces, link together
             prev_ptr->next = tmp_first_ptr;
@@ -126,6 +132,7 @@ void* allocate(int size) {
      */
     if ( size == free_block_size ) {
         free_list_start = tmp_first_ptr->next;
+        ret->magic_number = MAGIC_NUMBER;
         return &ret->ret_ptr;
     }
 
@@ -136,16 +143,18 @@ void* allocate(int size) {
      */
     if ( free_block_size - size >= METADATA ) { // need to make sure enough free space for size and next of new smaller free block
         free_list_start = (char*)(tmp_first_ptr) + size;
-        ret->size = size;
         tmp_first_ptr = (node_t*)free_list_start;
         tmp_first_ptr->size = free_block_size - size;
         tmp_first_ptr->next = prev_ptr->next;
+        ret->size = size;
+        ret->magic_number = MAGIC_NUMBER;
         return &ret->ret_ptr;
     }
 
     // search free list for big enough free space for allocation 
     free_block_size = next_ptr->size;
     ret = (header_t*)next_ptr;
+    // need to make sure block is either == size or free_block_size - size >= METADATA 
     while ( next_ptr->next && free_block_size < size ) {
         prev_ptr= next_ptr;
         next_ptr = next_ptr->next;
@@ -164,13 +173,14 @@ void* allocate(int size) {
          * TODO: NEED TO TEST!
          */
         if ( free_block_size - size >= METADATA ) {
-            ret->size = size;
             prev_ptr->next = (node_t*)((char*)(next_ptr) + size);
             next_ptr = prev_ptr->next;
             next_ptr->size = free_block_size - size;
             if (next_ptr->next) { // shouldnt have next pointer because at end of list set back to 0 (this block has already been alloc before)
                 next_ptr = 0;
             }
+            ret->size = size;
+            ret->magic_number = MAGIC_NUMBER;
             return &ret->ret_ptr;
         }
         /**
@@ -189,6 +199,7 @@ void* allocate(int size) {
      */
     if ( size == free_block_size ) {
         prev_ptr->next = next_ptr->next;
+        ret->magic_number = MAGIC_NUMBER;
         return &ret->ret_ptr;
     }
 
@@ -198,11 +209,12 @@ void* allocate(int size) {
      * prev_pointer points to a big enough chunk of memory
      */
     if ( free_block_size - size >= METADATA ) { // need to make sure enough free space for size and next of new smaller free block
-        ret->size = size;
         prev_ptr->next = (node_t*)((char*)(next_ptr) + size);
         next_ptr = prev_ptr->next;
         next_ptr->size = free_block_size - size;
-        next_ptr->next = (node_t*)ret->ret_ptr;
+        next_ptr->next = ((node_t*)ret)->next; // ret still points to where next was so use it to set the next link
+        ret->size = size;
+        ret->magic_number = MAGIC_NUMBER;
         return &ret->ret_ptr;
     }
     /**

@@ -24,11 +24,13 @@
  * 
  * 3. blocks that point to adjacent free block
  */
-
+#include <assert.h>
 void delete(void* del_ptr) {
     node_t* prev_ptr = free_list_start; //points to first free block
     node_t* next_ptr = prev_ptr;
-    header_t* toDelete = (header_t*)((char*)del_ptr - 8); //now points to size of block to deallocate, cast to char (1byte) and move 8 bytes to back
+    header_t* toDelete = (header_t*)((char*)del_ptr - METADATA); //now points to size of block to deallocate, cast to char (1byte) and move 16 bytes to back
+
+    assert(toDelete->magic_number == MAGIC_NUMBER);
 
     /* check if prev_pointer points beyond toDelete. If so toDelete is in front of free_list pointer */
     if ( (void*)toDelete < (void*)prev_ptr ) {
