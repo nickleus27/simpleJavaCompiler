@@ -24,12 +24,24 @@
  * 
  * 3. blocks that point to adjacent free block
  */
+
+/**
+ * TODO: Add munmap? Check to see if a node is the size of a page and free with munmap?
+ * if freeing in this way, update list linkage appropriately. more meta data would be needed
+ * to determine if memory location is a boundary that can be freed. 
+ * that is address (mmap_base + 0 + pagesize) could be freed but 
+ * address (mmap_base + 1 + pagesize) should not be freed
+ */
 #include <assert.h>
 void delete(void* del_ptr) {
     node_t* prev_ptr = free_list_start; //points to first free block
     node_t* next_ptr = prev_ptr;
     header_t* toDelete = (header_t*)((char*)del_ptr - METADATA); //now points to size of block to deallocate, cast to char (1byte) and move 16 bytes to back
 
+    /**
+     * TODO: add assembly to exit without assert included
+     * find assembly to jump to exit point
+     */
     assert(toDelete->magic_number == MAGIC_NUMBER);
 
     /* check if prev_pointer points beyond toDelete. If so toDelete is in front of free_list pointer */

@@ -13,6 +13,7 @@
  * THIS IS STILL A WORK IN PROGRESS
  */
 #include "free_list.h"
+#include <sys/mman.h>
 
 /**
  * @brief https://stackoverflow.com/questions/2529185/what-are-cfi-directives-in-gnu-assembler-gas-used-for
@@ -23,6 +24,11 @@
 void * free_list_start = 0;
 
 void* allocate(int size) {
+    // if size == 0: return null value
+    if (!size)
+    {
+        return 0;
+    }
     // inline assembly to save argument passed in at proper location expected
     // for sjava language. run make assembly
     #if !defined(DEBUG)
@@ -30,8 +36,7 @@ void* allocate(int size) {
         "\tldr\tw0, [sp, #112] //save size arg into this frames memory"
     );
     #endif
-    //+8 to store size tag
-    // for example size == 1, 1+8 ==9, while(size % 8) size++ == 16
+
     size += METADATA; // +16 for magic_number + size
     while (size % 8) { // 8 byte aligned
         size++;
@@ -52,13 +57,9 @@ void* allocate(int size) {
             "mov x16, 197        // mmap\n"
             "svc #0x80\n"
             "mov x8, x0\n"       // save returned pointer to tmp_first_ptr
-            "str x8, [sp, #88]"
+            "str x8, [sp, #72]"
         );
-        /**
-         * TODO: Need to check for error codes
-         * 
-         */
-        if (!tmp_first_ptr) {
+        if (!tmp_first_ptr || tmp_first_ptr == MAP_FAILED) {
             return 0;
         }
         free_list_start = tmp_first_ptr;  // point static pointer to new alloc space
@@ -96,9 +97,10 @@ void* allocate(int size) {
             "mov x16, 197        // mmap\n"
             "svc #0x80\n"
             "mov x8, x0\n"       // save returned pointer to tmp_first_ptr
-            "str x8, [sp, #88]"
+            "str x8, [sp, #72]"
         );
-        if (!tmp_first_ptr) {
+
+        if (tmp_first_ptr == MAP_FAILED) {
             return 0;
         }
         /**
@@ -118,6 +120,10 @@ void* allocate(int size) {
             ret->size = size;
             ret->magic_number = MAGIC_NUMBER;
             return &ret->ret_ptr;
+            /**
+             * TODO: will address always be greater than previous block?
+             * 
+             */
         } else { // else separate address spaces, link together
             prev_ptr->next = tmp_first_ptr;
             next_ptr = prev_ptr->next;
@@ -125,7 +131,6 @@ void* allocate(int size) {
         }
     }
     /**
-     * TODO: NEED TO TEST!
      * @brief if not at end of free chain but first free block and
      * (free_list pointer) points to a an equal size chunk of memory
      * free_size does not need to be updated, just point free_list to
@@ -136,8 +141,7 @@ void* allocate(int size) {
         return &ret->ret_ptr;
     }
 
-        /**
-     * TODO: NEED TO TEST!
+    /**
      * @brief if not at end of free chain but first free block and
      * (free_list pointer) points to a big enough chunk of memory
      */
@@ -163,15 +167,11 @@ void* allocate(int size) {
     }
 
     /**
-     * TODO: Need to Test!
      * If at end of free chain
      */
 
     //pointing at end of free chain
     if (!next_ptr->next) {
-        /**
-         * TODO: NEED TO TEST!
-         */
         if ( free_block_size - size >= METADATA ) {
             prev_ptr->next = (node_t*)((char*)(next_ptr) + size);
             next_ptr = prev_ptr->next;
@@ -184,15 +184,57 @@ void* allocate(int size) {
             return &ret->ret_ptr;
         }
         /**
-        * TODO: Need to check for size to ask from mmap
-        * 
-        */
+         * TODO: 
+         * WHAT DO WE EVEN DO WHEN MMAP MORE MEMORY? RECURSIVELY CALL ALLOCATE & START PROCESS AGAIN?
+         */
         unsigned long mmapSize = size + METADATA;
+            mmapSize = ((mmapSize/PAGESIZE) * PAGESIZE) + PAGESIZE;
+        
+        __asm__ (
+            "mov x0, 0           // start address\n"
+            "mov x1, x8          // pagesize length\n" // x8 holds mmapSize
+            "mov x2, 3           // rw- PROT_READ | PROT_WRITE\n"
+            "mov x3, 0x1001      // flags MAP_ANON | MAP_SHARED\n"
+            "mov x4, -1          // file descriptor\n"
+            "mov x5, 0           // offset\n"
+            "mov x16, 197        // mmap\n"
+            "svc #0x80\n"
+            "mov x8, x0\n"       // save returned pointer to tmp_first_ptr
+            "str x8, [sp, #72]"
+        );
+        if (tmp_first_ptr == MAP_FAILED) {
+            return 0;
+        }
+        /**
+         * TODO:  Need to check if address returned is below current free_list_start
+         * 
+         */
+        // if returned mmap address is contiguous
+        if ((char*)(prev_ptr) + free_block_size == (char*)tmp_first_ptr) {
+            tmp_first_ptr = free_list_start;
+            free_block_size = free_block_size + mmapSize;
+            free_list_start = (char*)(tmp_first_ptr) + size;
+            tmp_first_ptr = free_list_start;
+            tmp_first_ptr->size = free_block_size - size;
+            if (tmp_first_ptr->next) { // shouldnt have next pointer because at end of list set back to 0 (this block has already been alloc before)
+                tmp_first_ptr->next = 0;
+            }
+            ret->size = size;
+            ret->magic_number = MAGIC_NUMBER;
+            return &ret->ret_ptr;
+            /**
+             * TODO: will address always be greater than previous block?
+             * 
+             */
+        } else { // else separate address spaces, link together
+            prev_ptr->next = tmp_first_ptr;
+            next_ptr = prev_ptr->next;
+            tmp_first_ptr->size = mmapSize;
+        }
         return 0; //return NULL if at the end free chain and no blocks where big enough
     }
 
     /**
-     * TODO: NEED TO TEST!
      * @brief if not at end of free chain but first free block and
      * prev_pointer points to a an equal size chunk of memory
      * free_size does not need to be updated, just point free_list to
@@ -203,8 +245,7 @@ void* allocate(int size) {
         return &ret->ret_ptr;
     }
 
-        /**
-     * TODO: NEED TO TEST!
+    /**
      * @brief if not at end of free chain but first free block and
      * prev_pointer points to a big enough chunk of memory
      */
@@ -217,10 +258,5 @@ void* allocate(int size) {
         ret->magic_number = MAGIC_NUMBER;
         return &ret->ret_ptr;
     }
-    /**
-     * TODO: need te re mmap again here.
-     * 
-     */
-    unsigned long mmapSize = size + METADATA;
     return 0;
 }
